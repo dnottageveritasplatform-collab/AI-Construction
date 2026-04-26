@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas AI &#8212; Safety Monitor</title>
+    <style>
+        :root {
+            --bg-body: #121212; --bg-card: #1E1E1E; --bg-hover: #2A2A2A;
+            --bg-panel: #252526; --text-main: #FFFFFF; --text-muted: #A0A0A0;
+            --accent-blue: #2196F3; --accent-green: #4CAF50;
+            --accent-orange: #FF9800; --accent-teal: #009688;
+            --accent-red: #E57373; --border: #333333; --nav-height: 70px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',-apple-system,sans-serif; background-color:var(--bg-body); color:var(--text-main); overflow-y:auto; overflow-x:hidden; }
+        nav { height:var(--nav-height); background-color:#18181B; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; padding:0 2rem; position:sticky; top:0; z-index:100; }
+        .nav-left { font-size:1.2rem; font-weight:700; letter-spacing:-0.5px; }
+        .nav-center { display:flex; gap:2rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:0.9rem; font-weight:500; transition:0.2s; position:relative; padding-bottom:2px; }
+        .nav-link:hover, .nav-link.active { color:var(--text-main); }
+        .nav-link.active::after { content:''; position:absolute; bottom:-24px; left:0; width:100%; height:2px; background:var(--accent-blue); }
+        .nav-right { display:flex; align-items:center; gap:1rem; }
+        .bell-wrap { position:relative; cursor:pointer; }
+        .icon-bell { width:20px; height:20px; stroke:var(--text-muted); }
+        .bell-badge { display:none; position:absolute; top:-4px; right:-4px; background:var(--accent-red); color:#fff; font-size:0.6rem; font-weight:700; width:14px; height:14px; border-radius:50%; align-items:center; justify-content:center; }
+        .bell-badge.visible { display:flex; }
+        .avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; border:2px solid var(--border); }
+        .avatar img { width:100%; height:100%; object-fit:cover; }
+        main { max-width:1400px; margin:0 auto; padding:2rem; display:flex; flex-direction:column; gap:3rem; }
+        h2.section-title { font-size:1.1rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:1rem; border-left:3px solid var(--accent-blue); padding-left:10px; }
+        #toast { position:fixed; bottom:1.5rem; right:1.5rem; background:#333; color:#fff; padding:0.75rem 1.25rem; border-radius:8px; font-size:0.85rem; opacity:0; transform:translateY(10px); transition:opacity 0.3s,transform 0.3s; z-index:999; pointer-events:none; max-width:320px; }
+        #toast.show { opacity:1; transform:translateY(0); }
+        #toast.info { border-left:4px solid var(--accent-blue); }
+        #toast.success { border-left:4px solid var(--accent-green); }
+        #toast.error { border-left:4px solid var(--accent-red); }
+        /* Camera feed canvas */
+        #camCanvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+        .cam-overlay-tl { position:absolute; top:16px; left:16px; z-index:20; display:flex; align-items:center; gap:8px; }
+        .cam-overlay-br { position:absolute; bottom:16px; left:16px; z-index:20; font-family:monospace; font-size:0.8rem; color:rgba(255,255,255,0.65); }
+        .cam-zone-badge { position:absolute; top:16px; right:16px; z-index:20; font-family:monospace; font-size:0.72rem; color:rgba(255,255,255,0.5); text-align:right; line-height:1.6; }
+        .cam-timestamp  { position:absolute; bottom:16px; right:16px; z-index:20; font-family:monospace; font-size:0.72rem; color:rgba(255,255,255,0.45); }
+
+        .safety-container { display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; height:500px; }
+        .video-feed-card { background:#000; border:1px solid var(--accent-red); border-radius:12px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+        .live-badge { position:absolute; top:20px; left:20px; background:var(--accent-red); color:white; padding:4px 12px; border-radius:4px; font-weight:700; font-size:0.8rem; z-index:10; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%{opacity:1} 50%{opacity:0.4} 100%{opacity:1} }
+        .camera-info { position:absolute; bottom:20px; left:20px; color:rgba(255,255,255,0.7); font-family:monospace; font-size:0.9rem; z-index:10; }
+        .video-placeholder { width:100%; height:100%; background:repeating-linear-gradient(45deg,#111 0,#111 10px,#1a1a1a 10px,#1a1a1a 20px); display:flex; align-items:center; justify-content:center; color:#555; font-family:monospace; }
+        .bounding-box { position:absolute; top:40%; left:55%; width:80px; height:160px; border:3px solid var(--accent-red); box-shadow:0 0 10px var(--accent-red); z-index:5; }
+        .bounding-box-label { position:absolute; top:-25px; left:-3px; background:var(--accent-red); color:white; padding:2px 6px; font-size:0.7rem; font-weight:bold; white-space:nowrap; }
+        .log-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; }
+        .log-header { padding:1rem; border-bottom:1px solid var(--border); font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+        .log-scroll-area { flex:1; overflow-y:auto; }
+        .log-item { padding:1rem; border-bottom:1px solid #2A2A2A; border-left:4px solid transparent; background:rgba(255,255,255,0.02); }
+        .log-item.critical { border-left-color:var(--accent-red); background:rgba(229,115,115,0.05); }
+        .log-item.medium { border-left-color:#FFC107; background:rgba(255,193,7,0.06); }
+        .log-item.warning { border-left-color:var(--accent-orange); }
+        .log-item.log-highlighted { outline:2px solid var(--accent-red); background:rgba(229,115,115,0.12); border-radius:4px; }
+        .log-time { font-size:0.75rem; color:var(--text-muted); margin-bottom:4px; font-family:monospace; }
+        .log-msg { font-size:0.9rem; color:var(--text-main); line-height:1.4; }
+        .log-zone { display:inline-block; margin-top:6px; font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; }
+        .ack-btn { float:right; margin-top:-1.5rem; background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:0.7rem; padding:3px 8px; border-radius:4px; cursor:pointer; transition:0.2s; }
+        .ack-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+        .ack-done { float:right; margin-top:-1.5rem; font-size:0.7rem; color:var(--accent-green); }
+        .zones-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.5rem; }
+        .zone-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:1rem; }
+        .zone-name { font-size:0.9rem; font-weight:600; margin-bottom:4px; }
+        .zone-status { font-size:0.75rem; color:var(--text-muted); }
+    
+        /* User menu dropdown */
+        .user-menu-wrap{position:relative}
+        .user-menu-wrap .avatar{cursor:pointer;transition:border-color .2s,transform .2s}
+        .user-menu-wrap .avatar:hover{border-color:var(--accent-blue);transform:scale(1.05)}
+        .user-dropdown{display:none;position:absolute;top:calc(100% + 12px);right:0;background:#1C1C1E;border:1px solid #3A3A3A;border-radius:12px;min-width:210px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:500;overflow:hidden;animation:ddFade .15s ease}
+        @keyframes ddFade{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+        .user-dropdown.open{display:block}
+        .user-dropdown-header{padding:.85rem 1rem;display:flex;align-items:center;gap:.65rem}
+        .user-dropdown-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;border:2px solid #444;flex-shrink:0}
+        .user-dropdown-avatar img{width:100%;height:100%;object-fit:cover}
+        .user-dropdown-info{display:flex;flex-direction:column}
+        .user-dropdown-name{font-size:.85rem;font-weight:700;color:#fff;line-height:1.2}
+        .user-dropdown-role{font-size:.72rem;color:#888;margin-top:2px}
+        .user-dropdown-divider{height:1px;background:#2D2D2D}
+        .user-dropdown-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.85rem;color:#ccc;text-decoration:none;background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+        .user-dropdown-item:hover{background:rgba(255,255,255,.06);color:#fff}
+        .user-dropdown-item svg{width:15px;height:15px;opacity:.7;flex-shrink:0}
+        .user-dropdown-item.logout-item{color:#E57373;margin-bottom:2px}
+        .user-dropdown-item.logout-item:hover{background:rgba(229,115,115,.1);color:#ef9a9a}
+        .logout-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .logout-overlay.open{display:flex}
+        .logout-modal{background:#1C1C1E;border:1px solid #3A3A3A;border-radius:16px;padding:2rem;width:340px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.7);animation:ddFade .2s ease}
+        .logout-modal-icon{width:48px;height:48px;background:rgba(229,115,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+        .logout-modal-icon svg{width:24px;height:24px;stroke:#E57373}
+        .logout-modal h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+        .logout-modal p{font-size:.875rem;color:#888;margin-bottom:1.5rem;line-height:1.5}
+        .logout-modal-actions{display:flex;gap:.75rem}
+        .logout-modal-actions button{flex:1;padding:.65rem;border-radius:8px;font-size:.875rem;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid transparent;transition:.2s}
+        .btn-cancel-logout{background:transparent;border-color:#444!important;color:#aaa}
+        .btn-cancel-logout:hover{border-color:#666!important;color:#fff}
+        .btn-confirm-logout{background:rgba(229,115,115,.15);border-color:rgba(229,115,115,.4)!important;color:#E57373}
+        .btn-confirm-logout:hover{background:rgba(229,115,115,.25);color:#ef9a9a}
+        </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">Veritas AI Construction Platform</div>
+        <div class="nav-center">
+            <a href="/dashboard" class="nav-link" id="navLinkHome">Home</a>
+            <a href="/new-project" class="nav-link" id="navLinkProjects">Projects</a>
+            <a href="/safety" class="nav-link active" id="navLinkRecentAlerts">Recent Alerts</a>
+            <a href="/resource-plan" class="nav-link" id="navLinkResourcePlan">Resource Plan</a>
+            <a href="/vr-training" class="nav-link" id="navLinkVrTraining">VR Training Status</a>
+            <a href="/resourciist" class="nav-link" id="navLinkResourciist">Resource List</a>
+        </div>
+        <div class="nav-right">
+            <div class="bell-wrap" id="bellBtn">
+                <svg class="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="bell-badge" id="bellBadge"></span>
+            </div>
+            <div class="user-menu-wrap" id="userMenuWrap">
+            <div class="avatar" id="avatarBtn" title="Account menu">
+                <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+            </div>
+            <!-- User dropdown -->
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-dropdown-header">
+                    <div class="user-dropdown-avatar">
+                        <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+                    </div>
+                    <div class="user-dropdown-info">
+                        <span class="user-dropdown-name">D. Nottage</span>
+                        <span class="user-dropdown-role">Lead Instructor</span>
+                    </div>
+                </div>
+                <div class="user-dropdown-divider"></div>
+                <a href="/dashboard" class="user-dropdown-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    My Profile
+                </a>
+                <div class="user-dropdown-divider"></div>
+                <button class="user-dropdown-item logout-item" onclick="showLogoutModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </button>
+            </div>
+        </div>
+        </div>
+    </nav>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem 0;max-width:1400px;margin:0 auto;">
+        <div id="projectSwitcher" style="min-height:2rem;"></div>
+    </div>
+    <main>
+        <section>
+            <h2 class="section-title red">Safety Monitor &#8212; Command Center</h2>
+            <div class="safety-container">
+
+                <div class="video-feed-card" id="videoFeedCard">
+                    <canvas id="camCanvas"></canvas>
+
+                    <!-- Overlay UI — updated by JS -->
+                    <div class="cam-overlay-tl">
+                        <div class="live-badge" id="liveBadge">LIVE</div>
+                        <span id="alertPillOverlay" style="display:none;background:rgba(229,115,115,0.85);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:4px;"></span>
+                    </div>
+                    <div class="cam-overlay-br" id="camInfo">CAM-04 | ZONE B | 1080p</div>
+                    <div class="cam-zone-badge" id="camZoneBadge">ZONE B<br>SECTOR 4-E</div>
+                    <div class="cam-timestamp"  id="camTimestamp"></div>
+                </div>
+
+                <div class="log-card">
+                    <div class="log-header">
+                        <span>Recent Alerts</span>
+                        <span id="newAlertsBadge" style="font-size:0.8rem;color:var(--accent-red);"></span>
+                    </div>
+                    <div class="log-scroll-area" id="alertLog">
+                        <!-- Populated by safety.js via /api/safety/alerts -->
+                        <div class="log-item critical">
+                            <div class="log-time">10:42:15 AM</div>
+                            <div class="log-msg" style="color:var(--accent-red);font-weight:bold;">CRITICAL: Missing Hard Hat Detected</div>
+                            <span class="log-zone">Zone 4 &#8212; East Wing</span>
+                        </div>
+                        <div class="log-item warning">
+                            <div class="log-time">10:38:00 AM</div>
+                            <div class="log-msg" style="color:var(--accent-orange);">WARNING: Unstable Stacking Detected</div>
+                            <span class="log-zone">Zone 2 &#8212; Material Bay</span>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">09:15:22 AM</div>
+                            <div class="log-msg">INFO: Safety perimeter breach detected</div>
+                            <span class="log-zone">Zone 1 &#8212; Foundation</span>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">08:45:00 AM</div>
+                            <div class="log-msg" style="color:#666;">System calibration complete</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Camera zones grid -->
+            <div class="zones-grid" id="zonesContainer">
+                <!-- Populated by safety.js -->
+                <div class="zone-card">
+                    <div class="zone-name">Zone 1 &#8212; Foundation</div>
+                    <div class="zone-status">CAM-01 &#8226; Active &#8226; 0 alerts</div>
+                </div>
+                <div class="zone-card">
+                    <div class="zone-name">Zone 2 &#8212; Material Bay</div>
+                    <div class="zone-status" style="color:var(--accent-orange)">CAM-02 &#8226; Active &#8226; 1 warning</div>
+                </div>
+                <div class="zone-card">
+                    <div class="zone-name">Zone 3 &#8212; West Wing</div>
+                    <div class="zone-status">CAM-03 &#8226; Active &#8226; 0 alerts</div>
+                </div>
+                <div class="zone-card">
+                    <div class="zone-name">Zone 4 &#8212; East Wing</div>
+                    <div class="zone-status" style="color:var(--accent-red)">CAM-04 &#8226; Active &#8226; 1 critical</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast"></div>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/project_context.js"></script>
+    <script src="/static/js/safety.js"></script>
+</body>
+</html>

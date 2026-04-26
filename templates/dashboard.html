@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas AI — Dashboard</title>
+    <style>
+        :root {
+            --bg-body: #121212; --bg-card: #1E1E1E; --bg-hover: #2A2A2A;
+            --bg-panel: #252526; --text-main: #FFFFFF; --text-muted: #A0A0A0;
+            --accent-blue: #2196F3; --accent-green: #4CAF50;
+            --accent-orange: #FF9800; --accent-teal: #009688;
+            --accent-red: #E57373; --border: #333333; --nav-height: 70px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',-apple-system,sans-serif; background-color:var(--bg-body); color:var(--text-main); overflow-y:auto; overflow-x:hidden; }
+        nav { height:var(--nav-height); background-color:#18181B; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; padding:0 2rem; position:sticky; top:0; z-index:100; }
+        .nav-left { font-size:1.2rem; font-weight:700; letter-spacing:-0.5px; }
+        .nav-center { display:flex; gap:2rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:0.9rem; font-weight:500; transition:0.2s; position:relative; padding-bottom:2px; }
+        .nav-link:hover, .nav-link.active { color:var(--text-main); }
+        .nav-link.active::after { content:''; position:absolute; bottom:-24px; left:0; width:100%; height:2px; background:var(--accent-blue); }
+        .nav-right { display:flex; align-items:center; gap:1rem; }
+        .bell-wrap { position:relative; cursor:pointer; }
+        .icon-bell { width:20px; height:20px; stroke:var(--text-muted); }
+        .bell-badge { display:none; position:absolute; top:-4px; right:-4px; background:var(--accent-red); color:#fff; font-size:0.6rem; font-weight:700; width:14px; height:14px; border-radius:50%; align-items:center; justify-content:center; }
+        .bell-badge.visible { display:flex; }
+        .avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; border:2px solid var(--border); }
+        .avatar img { width:100%; height:100%; object-fit:cover; }
+        main { max-width:1400px; margin:0 auto; padding:2rem; display:flex; flex-direction:column; gap:3rem; }
+        h2.section-title { font-size:1.1rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:1rem; border-left:3px solid var(--accent-blue); padding-left:10px; }
+        .summary-grid { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:350px 140px; gap:1.5rem; }
+        .card { background-color:var(--bg-card); border:1px solid var(--border); border-radius:12px; overflow:hidden; position:relative; }
+        .card-3d { grid-column:1/2; grid-row:1/2; display:flex; align-items:center; justify-content:center; padding:0; }
+        .card-3d img { width:100%; height:100%; object-fit:cover; }
+        .overlay-tag { position:absolute; top:1rem; right:1rem; background:rgba(0,0,0,0.7); padding:5px 10px; border-radius:6px; font-size:0.8rem; }
+        .card-graph { grid-column:2/3; grid-row:1/2; padding:1.5rem; display:flex; flex-direction:column; }
+        .graph-wrapper { flex:1; position:relative; margin-top:1rem; }
+        svg.line-chart { width:100%; height:100%; overflow:visible; }
+        .small-widget-container { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; }
+        .small-card { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1rem; display:flex; flex-direction:column; justify-content:center; }
+        .small-label { color:var(--text-muted); font-size:0.8rem; margin-bottom:0.5rem; }
+        .small-value { font-size:1.1rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
+        .alert-dot { width:10px; height:10px; background:var(--accent-red); border-radius:50%; display:inline-block; }
+        #toast { position:fixed; bottom:1.5rem; right:1.5rem; background:#333; color:#fff; padding:0.75rem 1.25rem; border-radius:8px; font-size:0.85rem; opacity:0; transform:translateY(10px); transition:opacity 0.3s,transform 0.3s; z-index:999; pointer-events:none; max-width:320px; }
+        #toast.show { opacity:1; transform:translateY(0); }
+        #toast.info { border-left:4px solid var(--accent-blue); }
+        #toast.success { border-left:4px solid var(--accent-green); }
+        #toast.error { border-left:4px solid var(--accent-red); }
+        .page-title { font-size:1.4rem; font-weight:600; padding:1.5rem 2rem 0; max-width:1400px; margin:0 auto; }
+        .dashboard-grid { display:grid; grid-template-columns:2fr 1fr; gap:1.25rem; padding:1.25rem 2rem; max-width:1400px; margin:0 auto; }
+        .project-header-card { grid-column:1/-1; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem 2rem; display:flex; justify-content:space-between; align-items:center; }
+        .ph-title h1 { font-size:1.4rem; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.75rem; }
+        .badge-active { background:rgba(76,175,80,0.15); color:var(--accent-green); font-size:0.7rem; padding:3px 10px; border-radius:20px; font-weight:700; text-transform:uppercase; border:1px solid rgba(76,175,80,0.3); }
+        .ph-metrics { display:flex; gap:2rem; color:var(--text-muted); font-size:0.9rem; margin-top:0.5rem; }
+        .ph-metrics strong { color:var(--text-main); }
+        .budget-group { display:flex; flex-direction:column; gap:4px; }
+        .budget-bar { width:100px; height:4px; background:#333; border-radius:2px; }
+        .budget-fill { width:80%; height:100%; background:var(--accent-blue); border-radius:2px; }
+        .finance-inline { display:flex; align-items:center; gap:0.5rem; margin-top:0.4rem; }
+        .finance-input { width:130px; background:#141414; border:1px solid #444; border-radius:6px; color:var(--text-main); padding:5px 8px; font-size:0.8rem; }
+        .finance-input:focus { outline:none; border-color:var(--accent-blue); }
+        .finance-save-btn { background:rgba(33,150,243,0.15); border:1px solid rgba(33,150,243,0.45); color:#9fd0ff; border-radius:6px; padding:5px 9px; font-size:0.75rem; cursor:pointer; transition:0.2s; }
+        .finance-save-btn:hover { background:rgba(33,150,243,0.22); color:#d7ecff; }
+        .finance-save-btn:disabled { opacity:0.55; cursor:not-allowed; }
+        .edit-btn { background:transparent; border:1px solid #666; color:white; padding:8px 16px; border-radius:6px; cursor:pointer; transition:0.2s; text-decoration:none; }
+        .edit-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+        .widget-3d { height:380px; background:#0d1117; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0; }
+        #bimCanvas { width:100%; height:100%; display:block; }
+        .bim-legend { position:absolute; bottom:40px; right:10px; display:flex; flex-direction:column; gap:3px; pointer-events:none; }
+        .bim-legend-item { display:flex; align-items:center; gap:5px; font-size:0.68rem; color:rgba(255,255,255,0.6); }
+        .bim-legend-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .model-controls { position:absolute; top:1rem; right:1rem; display:flex; gap:0.5rem; z-index:10; }
+        .dropdown { background:rgba(30,30,30,0.85); backdrop-filter:blur(4px); color:white; border:1px solid rgba(255,255,255,0.15); padding:0.4rem 0.75rem; border-radius:6px; font-size:0.85rem; cursor:pointer; }
+        .phase-tag { position:absolute; bottom:1rem; left:1rem; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); padding:4px 10px; border-radius:6px; font-size:0.75rem; color:var(--text-muted); }
+        .widget-progress { height:380px; display:flex; flex-direction:column; padding:1.25rem; }
+        .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+        .card-title { font-size:1rem; font-weight:500; }
+        .card-title-link { font-size:1rem; font-weight:500; color:var(--text-main); text-decoration:none; }
+        .card-title-link:hover { color:var(--accent-blue); }
+        .completion-badge { font-size:0.8rem; color:var(--text-muted); }
+        .completion-badge span { color:var(--accent-blue); font-weight:700; }
+        .graph-container { flex:1; position:relative; padding-bottom:24px; padding-left:32px; }
+        svg.line-graph { width:100%; height:100%; overflow:visible; }
+        .axis-label { fill:var(--text-muted); font-size:11px; }
+        .grid-line { stroke:#2D2D2D; stroke-width:1; }
+        .graph-line { fill:none; stroke:var(--accent-blue); stroke-width:2.5; stroke-linecap:round; }
+        .target-line { fill:none; stroke:var(--accent-teal); stroke-width:1.5; stroke-dasharray:4 4; }
+        .graph-area { fill:url(#gradBlue); opacity:0.25; }
+        .bottom-row { grid-column:1/-1; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1.25rem; }
+        .bottom-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.25rem; overflow:hidden; }
+        .team-roster-row { grid-column:1/-1; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem; }
+        .team-section { display:flex; flex-direction:column; gap:1rem; }
+        .team-scroll { display:flex; gap:1rem; overflow-x:auto; padding-bottom:0.5rem; }
+        .team-scroll::-webkit-scrollbar { height:4px; }
+        .team-scroll::-webkit-scrollbar-thumb { background:#444; border-radius:2px; }
+        .team-card { min-width:160px; background:var(--bg-hover); border:1px solid var(--border); border-radius:12px; padding:1.2rem; display:flex; flex-direction:column; align-items:center; text-align:center; gap:0.6rem; flex-shrink:0; }
+        .team-avatar { width:48px; height:48px; border-radius:50%; background:#333; overflow:hidden; }
+        .team-avatar img { width:100%; height:100%; object-fit:cover; }
+        .roster-title { font-size:1rem; font-weight:500; margin-bottom:0.25rem; }
+        .team-name { font-size:0.9rem; font-weight:600; }
+        .team-role { font-size:0.75rem; background:rgba(33,150,243,0.1); color:var(--accent-blue); padding:2px 8px; border-radius:10px; }
+        .badge { font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(229,115,115,0.2); color:var(--accent-red); }
+        .alert-list { display:flex; flex-direction:column; gap:0.5rem; }
+        .alert-item { display:flex; align-items:flex-start; gap:0.75rem; padding:0.6rem 0.5rem; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background 0.15s; }
+        .alert-item:last-child { border-bottom:none; }
+        .alert-item:hover { background:rgba(255,255,255,0.04); }
+        .alert-item:focus-visible { outline:2px solid var(--accent-blue); outline-offset:2px; }
+        .alert-item.critical-row { border-left:3px solid var(--accent-red); padding-left:0.35rem; }
+        .alert-icon { width:28px; height:28px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; }
+        .alert-icon.critical { background:rgba(229,115,115,0.2); color:var(--accent-red); animation:alertPulse 2s ease-in-out infinite; }
+        .alert-icon.medium { background:rgba(255,193,7,0.18); color:#FFC107; }
+        .alert-icon.warning { background:rgba(255,183,77,0.2); color:var(--accent-orange); }
+        .alert-item.medium-row { border-left:3px solid #FFC107; padding-left:0.35rem; }
+        @keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(229,115,115,0.4)} 50%{box-shadow:0 0 0 5px rgba(229,115,115,0)} }
+        .alert-body { flex:1; min-width:0; }
+        .alert-title { font-size:0.85rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .alert-meta { font-size:0.72rem; color:var(--text-muted); margin-top:2px; }
+        .alert-ack-btn { flex-shrink:0; background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:0.65rem; padding:2px 7px; border-radius:4px; cursor:pointer; transition:0.2s; }
+        .alert-ack-btn:hover { border-color:var(--accent-blue); color:var(--accent-blue); }
+        .alert-ack-btn.acked { border-color:var(--accent-green); color:var(--accent-green); }
+        .task-list { display:flex; flex-direction:column; gap:1rem; }
+        .task-item { display:flex; align-items:flex-start; gap:0.75rem; }
+        .task-icon { width:34px; height:34px; flex-shrink:0; background:rgba(74,144,226,0.12); border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--accent-blue); font-size:0.9rem; }
+        .task-details { flex:1; }
+        .task-name { font-size:0.9rem; font-weight:500; display:block; }
+        .task-status { font-size:0.75rem; color:var(--text-muted); margin-top:2px; display:block; }
+        .task-time { font-size:0.8rem; font-weight:600; white-space:nowrap; padding:2px 8px; border-radius:10px; }
+        .task-time.urgent { background:rgba(229,115,115,0.15); color:var(--accent-red); }
+        .task-time.soon { background:rgba(255,183,77,0.15); color:var(--accent-orange); }
+        .task-time.ok { background:rgba(74,144,226,0.12); color:var(--accent-blue); }
+        /* dashboard.js generates class="task-countdown countdown-urgent|soon|ok" */
+        .task-countdown { font-size:0.8rem; font-weight:600; white-space:nowrap; padding:2px 8px; border-radius:10px; background:rgba(74,144,226,0.12); color:var(--accent-blue); }
+        .task-countdown.countdown-urgent { background:rgba(229,115,115,0.15); color:var(--accent-red); }
+        .task-countdown.countdown-soon   { background:rgba(255,183,77,0.15);  color:var(--accent-orange); }
+        .task-countdown.countdown-ok     { background:rgba(74,144,226,0.12);  color:var(--accent-blue); }
+        .vr-list { display:flex; flex-direction:column; gap:1.1rem; }
+        .vr-item { display:flex; flex-direction:column; gap:0.4rem; }
+        .vr-header { display:flex; justify-content:space-between; font-size:0.85rem; }
+        .vr-pct { font-weight:600; color:var(--accent-blue); }
+        .progress-bg { width:100%; height:6px; background:#333; border-radius:3px; }
+        .progress-fill { height:100%; border-radius:3px; background:var(--accent-blue); transition:width 0.6s ease; }
+        .progress-fill.done { background:var(--accent-green); }
+        /* dashboard.js vrFillClass() returns fill-green | fill-blue | fill-grey */
+        .progress-fill.fill-green { background:var(--accent-green); }
+        .progress-fill.fill-blue  { background:var(--accent-blue); }
+        .progress-fill.fill-grey  { background:#555; }
+        .doc-list { display:flex; flex-direction:column; gap:0.7rem; max-height:220px; overflow-y:auto; }
+        .doc-item { display:flex; align-items:center; gap:0.7rem; padding:0.55rem 0.6rem; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:background .15s,border-color .15s; }
+        .doc-item:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.14); }
+        .doc-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:700; color:#fff; flex-shrink:0; }
+        .doc-info { min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .doc-name { font-size:0.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .doc-meta { font-size:0.72rem; color:var(--text-muted); }
+        .skeleton { background:linear-gradient(90deg,#2a2a2a 25%,#333 50%,#2a2a2a 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:4px; height:36px; margin-bottom:8px; }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    
+        /* User menu dropdown */
+        .user-menu-wrap{position:relative}
+        .user-menu-wrap .avatar{cursor:pointer;transition:border-color .2s,transform .2s}
+        .user-menu-wrap .avatar:hover{border-color:var(--accent-blue);transform:scale(1.05)}
+        .user-dropdown{display:none;position:absolute;top:calc(100% + 12px);right:0;background:#1C1C1E;border:1px solid #3A3A3A;border-radius:12px;min-width:210px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:500;overflow:hidden;animation:ddFade .15s ease}
+        @keyframes ddFade{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+        .user-dropdown.open{display:block}
+        .user-dropdown-header{padding:.85rem 1rem;display:flex;align-items:center;gap:.65rem}
+        .user-dropdown-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;border:2px solid #444;flex-shrink:0}
+        .user-dropdown-avatar img{width:100%;height:100%;object-fit:cover}
+        .user-dropdown-info{display:flex;flex-direction:column}
+        .user-dropdown-name{font-size:.85rem;font-weight:700;color:#fff;line-height:1.2}
+        .user-dropdown-role{font-size:.72rem;color:#888;margin-top:2px}
+        .user-dropdown-divider{height:1px;background:#2D2D2D}
+        .user-dropdown-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.85rem;color:#ccc;text-decoration:none;background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+        .user-dropdown-item:hover{background:rgba(255,255,255,.06);color:#fff}
+        .user-dropdown-item svg{width:15px;height:15px;opacity:.7;flex-shrink:0}
+        .user-dropdown-item.logout-item{color:#E57373;margin-bottom:2px}
+        .user-dropdown-item.logout-item:hover{background:rgba(229,115,115,.1);color:#ef9a9a}
+        .logout-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .logout-overlay.open{display:flex}
+        .logout-modal{background:#1C1C1E;border:1px solid #3A3A3A;border-radius:16px;padding:2rem;width:340px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.7);animation:ddFade .2s ease}
+        .logout-modal-icon{width:48px;height:48px;background:rgba(229,115,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+        .logout-modal-icon svg{width:24px;height:24px;stroke:#E57373}
+        .logout-modal h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+        .logout-modal p{font-size:.875rem;color:#888;margin-bottom:1.5rem;line-height:1.5}
+        .logout-modal-actions{display:flex;gap:.75rem}
+        .logout-modal-actions button{flex:1;padding:.65rem;border-radius:8px;font-size:.875rem;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid transparent;transition:.2s}
+        .btn-cancel-logout{background:transparent;border-color:#444!important;color:#aaa}
+        .btn-cancel-logout:hover{border-color:#666!important;color:#fff}
+        .btn-confirm-logout{background:rgba(229,115,115,.15);border-color:rgba(229,115,115,.4)!important;color:#E57373}
+        .btn-confirm-logout:hover{background:rgba(229,115,115,.25);color:#ef9a9a}
+        </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">Veritas AI Construction Platform</div>
+        <div class="nav-center">
+            <a href="/dashboard" class="nav-link active">Home</a>
+            <a href="/new-project" class="nav-link" id="navLinkProjects">Projects</a>
+            <a href="/safety" class="nav-link" id="navLinkRecentAlerts">Recent Alerts</a>
+            <a href="/resource-plan" class="nav-link">Resource Plan</a>
+            <a href="/vr-training" class="nav-link" id="navLinkVrTraining">VR Training Status</a>
+            <a href="/resourciist" class="nav-link">Resource List</a>
+        </div>
+        <div class="nav-right">
+            <div class="bell-wrap" id="bellBtn">
+                <svg class="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="bell-badge" id="bellBadge"></span>
+            </div>
+            <div class="user-menu-wrap" id="userMenuWrap">
+            <div class="avatar" id="avatarBtn" title="Account menu">
+                <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+            </div>
+            <!-- User dropdown -->
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-dropdown-header">
+                    <div class="user-dropdown-avatar">
+                        <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+                    </div>
+                    <div class="user-dropdown-info">
+                        <span class="user-dropdown-name">D. Nottage</span>
+                        <span class="user-dropdown-role">Lead Instructor</span>
+                    </div>
+                </div>
+                <div class="user-dropdown-divider"></div>
+                <a href="/dashboard" class="user-dropdown-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    My Profile
+                </a>
+                <div class="user-dropdown-divider"></div>
+                <button class="user-dropdown-item logout-item" onclick="showLogoutModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </button>
+            </div>
+        </div>
+        </div>
+    </nav>
+    <div style="display:flex;justify-content:flex-start;align-items:center;padding:1.5rem 2rem 0;max-width:1400px;margin:0 auto;">
+        <div id="projectSwitcher" style="min-height:2rem;"></div>
+    </div>
+    <div class="dashboard-grid">
+        <div class="project-header-card">
+            <div class="ph-title">
+                <h1><span id="summaryProjectName">Project</span> <span class="badge-active" id="summaryProjectStatus">Active</span></h1>
+                <div class="ph-metrics">
+                    <span>Start: <strong id="summaryProjectStart">—</strong></span>
+                    <span>Est. Completion: <strong id="summaryProjectEnd">—</strong></span>
+                    <div class="budget-group">
+                        <span>Budget: <strong id="summaryProjectBudget">—</strong></span>
+                        <div class="budget-bar"><div class="budget-fill" id="summaryBudgetFill"></div></div>
+                        <div class="finance-inline">
+                            <input id="summaryBudgetSpentInput" class="finance-input" type="number" min="0" step="0.01" placeholder="Update spent">
+                            <button id="summaryBudgetSaveBtn" class="finance-save-btn" type="button">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <a href="/edit-project" class="edit-btn" id="summaryEditProjectLink">Edit Project</a>
+        </div>
+
+        <!-- 3D BIM Model (UC-02) — IFC.js powered -->
+        <div class="card widget-3d" style="overflow:hidden;padding:0;position:relative" id="bimCard">
+            <div class="model-controls">
+                <select class="dropdown" id="timeFilter">
+                    <option value="all">All Days</option>
+                </select>
+                <button class="dropdown" id="modelInfoBtn" title="Model info">&#8505;</button>
+            </div>
+            <!-- Three.js renders here -->
+            <canvas id="bimCanvas"></canvas>
+            <!-- IFC loading overlay -->
+            <div id="bimLoadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(13,17,23,.88);flex-direction:column;align-items:center;justify-content:center;gap:.75rem;z-index:10">
+                <div id="bimSpinner" style="width:36px;height:36px;border:3px solid rgba(59,130,246,.2);border-top-color:#3b82f6;border-radius:50%;animation:bimSpin .9s linear infinite"></div>
+                <span id="bimLoadingText" style="font-size:.78rem;color:#6b7280;font-family:monospace">Loading IFC model…</span>
+            </div>
+            <!-- No-IFC placeholder -->
+            <div id="bimNoModel" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;color:#e5e7eb;background:rgba(13,17,23,.94);z-index:7">
+                <svg width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="opacity:.72" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <circle cx="8.25" cy="10.25" r="1.35" fill="currentColor" stroke="none"/>
+                    <path d="M3 17l4.5-3.5 3.2 2.6L14.5 11 21 17.2"/>
+                </svg>
+                <span style="font-size:.95rem;font-weight:600;color:#f3f4f6">No image available</span>
+                <span style="font-size:.76rem;color:#9ca3af;max-width:18rem;text-align:center">There is no IFC file to render for this project.</span>
+            </div>
+            <div id="bimPhaseEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:.35rem;background:rgba(13,17,23,.94);z-index:8;text-align:center;padding:1rem">
+                <span style="font-size:.95rem;font-weight:600;color:#f3f4f6">No Mesh Available</span>
+                <span style="font-size:.76rem;color:#9ca3af;max-width:16rem">No geometry in this IFC is tagged for the selected phase.</span>
+            </div>
+            <div class="phase-tag" id="modelPhaseTag">Loading BIM…</div>
+            <div class="bim-legend" id="bimLegend"></div>
+        </div>
+
+        <!-- Progress Graph -->
+        <div class="card widget-progress">
+            <div class="card-header">
+                <span class="card-title">Project Progress</span>
+                <span class="completion-badge">Overall: <span id="completionPct">&#8212;</span></span>
+            </div>
+            <div class="graph-container">
+                <svg class="line-graph" viewBox="0 0 300 150" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#4A90E2"/>
+                            <stop offset="100%" stop-color="#4A90E2" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <line x1="0" y1="30"  x2="300" y2="30"  class="grid-line"/>
+                    <line x1="0" y1="70"  x2="300" y2="70"  class="grid-line"/>
+                    <line x1="0" y1="110" x2="300" y2="110" class="grid-line"/>
+                    <text x="-28" y="33"  class="axis-label">80%</text>
+                    <text x="-28" y="73"  class="axis-label">50%</text>
+                    <text x="-28" y="113" class="axis-label">20%</text>
+                    <path id="graphArea" class="graph-area" d="M0,140 C50,120 100,125 150,70 C200,50 250,40 300,20 V150 H0 Z"/>
+                    <path id="graphLine" class="graph-line" d="M0,140 C50,120 100,125 150,70 C200,50 250,40 300,20"/>
+                    <path id="targetLine" class="target-line" d="M0,130 L300,10"/>
+                    <!-- phase sync marker: amber line + dot, hidden until a specific phase is selected -->
+                    <line   id="phaseMarker"    x1="0" y1="0" x2="0" y2="130" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" opacity="0"/>
+                    <circle id="phaseMarkerDot" cx="0" cy="0" r="4" fill="#f59e0b" opacity="0"/>
+                    <text x="5"   y="148" class="axis-label">Mon</text>
+                    <text x="70"  y="148" class="axis-label">Tue</text>
+                    <text x="145" y="148" class="axis-label">Wed</text>
+                    <text x="218" y="148" class="axis-label">Thu</text>
+                    <text x="278" y="148" class="axis-label">Fri</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="bottom-row">
+            <div class="bottom-card">
+                <div class="card-header">
+                    <a href="/safety" id="linkSafety" class="card-title-link">Recent Alerts (Safety Monitor) &#8594;</a>
+                    <span class="badge" id="alertCountBadge" style="display:none;"></span>
+                </div>
+                <div class="alert-list" id="alertList">
+                    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+                </div>
+            </div>
+            <div class="bottom-card">
+                <div class="card-header">
+                    <a href="/resource-plan" id="linkResourcePlan" class="card-title-link">Upcoming Tasks (Resource Plan) &#8594;</a>
+                    <span class="badge" id="taskCountBadge" style="display:none"></span>
+                </div>
+                <div class="task-list" id="taskList">
+                    <div class="skeleton" style="height:48px"></div>
+                    <div class="skeleton" style="height:48px"></div>
+                    <div class="skeleton" style="height:48px"></div>
+                </div>
+            </div>
+            <div class="bottom-card">
+                <div class="card-header">
+                    <a href="/vr-training" id="linkVrTraining" class="card-title-link">VR Training Status &#8594;</a>
+                    <span id="vrOverallBadge" style="font-size:0.75rem;font-weight:700;color:var(--accent-blue)">&#8212;</span>
+                </div>
+                <div class="vr-list" id="vrList">
+                    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+                </div>
+            </div>
+            <div class="bottom-card" id="dashboardDocumentsCard">
+                <div class="card-header">
+                    <a href="#dashboardDocumentsCard" id="linkProjectDocs" class="card-title-link">Project Documents &#8594;</a>
+                    <span id="docCountBadge" style="font-size:0.75rem;font-weight:700;color:var(--accent-blue)">&#8212;</span>
+                </div>
+                <div class="doc-list" id="dashboardDocList">
+                    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-roster-row">
+            <div class="team-section">
+                <h3 class="roster-title">Team Roster</h3>
+                <div class="team-scroll" id="teamRoster">
+                    <div class="skeleton" style="min-width:160px;height:120px;margin-bottom:0"></div>
+                    <div class="skeleton" style="min-width:160px;height:120px;margin-bottom:0"></div>
+                    <div class="skeleton" style="min-width:160px;height:120px;margin-bottom:0"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast"></div>
+    <!-- ── Logout Confirmation Modal ── -->
+    <div id="logoutOverlay" class="logout-overlay" onclick="hideLogoutModal()">
+        <div class="logout-modal" onclick="event.stopPropagation()">
+            <div class="logout-modal-icon">⏻</div>
+            <h3 class="logout-modal-title">Sign Out</h3>
+            <p class="logout-modal-body">Are you sure you want to sign out of the Veritas AI Construction Platform?</p>
+            <div class="logout-modal-actions">
+                <button class="logout-cancel-btn" onclick="hideLogoutModal()">Cancel</button>
+                <button class="logout-confirm-btn" id="confirmLogoutBtn" onclick="confirmLogout()">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js + web-ifc for real IFC rendering -->
+    <script src="/static/js/three.min.js"></script>
+
+    <style>
+        @keyframes bimSpin { to { transform: rotate(360deg); } }
+        #bimLoadingOverlay { display: none; }
+        #bimLoadingOverlay.active { display: flex !important; }
+        #bimNoModel.active { display: flex !important; }
+        #bimPhaseEmpty.active { display: flex !important; }
+    </style>
+
+
+
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/project_context.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+
+    <script>
+    /* =====================================================================
+       IFC VIEWER  —  uses web-ifc (WASM) + Three.js
+       Replaces the old canvas BIM renderer.
+       Called by dashboard.js patch below when a project loads.
+    ===================================================================== */
+    window.IFCViewer = (() => {
+        const canvas    = document.getElementById("bimCanvas");
+        const card      = document.getElementById("bimCard");
+        const overlay   = document.getElementById("bimLoadingOverlay");
+        const noModel   = document.getElementById("bimNoModel");
+        const phaseEmpty = document.getElementById("bimPhaseEmpty");
+        const phaseTag  = document.getElementById("modelPhaseTag");
+        // Avoid spamming the debug ingest endpoint for every mesh.
+        // This can overwhelm the browser/network and break rendering.
+        let _sentIndexLog = false;
+
+        if (!canvas || !card) return {};
+
+        /* ── Three.js setup ── */
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.setClearColor(0x0d1117);
+
+        const scene  = new THREE.Scene();
+        scene.fog    = new THREE.Fog(0x0d1117, 80, 200);
+
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+        let camTheta = -0.6, camPhi = 0.45, camRadius = 30, camTargetY = 4;
+
+        function posCamera() {
+            camera.position.set(
+                camRadius * Math.sin(camTheta) * Math.cos(camPhi),
+                camTargetY + camRadius * Math.sin(camPhi),
+                camRadius * Math.cos(camTheta) * Math.cos(camPhi)
+            );
+            // Keep horizon level (no roll) — important when orbit uses spherical angles.
+            camera.up.set(0, 1, 0);
+            camera.lookAt(0, camTargetY, 0);
+        }
+        posCamera();
+
+            // Ensure renderer has a correct initial size (ResizeObserver may fire later).
+        const initW = card.clientWidth, initH = card.clientHeight;
+        if (initW && initH) {
+            camera.aspect = initW / initH;
+            camera.updateProjectionMatrix();
+            renderer.setSize(initW, initH);
+            console.log("[IFCViewer] initial size W,H =", initW, initH);
+        }
+
+        /* Lights */
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const sun = new THREE.DirectionalLight(0xfff8f0, 0.9);
+        sun.position.set(20, 40, 15); sun.castShadow = true;
+        sun.shadow.mapSize.set(1024, 1024);
+        scene.add(sun);
+        const fillLight = new THREE.DirectionalLight(0xc8d8ff, 0.3);
+        fillLight.position.set(-15, 10, -20);
+        scene.add(fillLight);
+
+        /* Ground plane (resized when IFC loads so large models aren’t “floating” on a tiny pad) */
+        let gnd = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshLambertMaterial({ color: 0x111520 })
+        );
+        gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true;
+        scene.add(gnd);
+
+        /* Resize */
+        const ro = new ResizeObserver(() => {
+            const W = card.clientWidth, H = card.clientHeight;
+            if (!W || !H) return;
+            camera.aspect = W / H; camera.updateProjectionMatrix();
+            renderer.setSize(W, H);
+        });
+        ro.observe(card);
+
+        /* Orbit */
+        let drag = false, px = 0, py = 0, autoRot = false;
+        canvas.addEventListener("mousedown", e => { drag = true; px = e.clientX; py = e.clientY; autoRot = false; });
+        window.addEventListener("mouseup",   () => drag = false);
+        canvas.addEventListener("mousemove", e => {
+            if (!drag) return;
+            camTheta -= (e.clientX - px) * 0.007;
+            camPhi    = Math.max(0.05, Math.min(Math.PI/2 - 0.04, camPhi - (e.clientY - py) * 0.007));
+            px = e.clientX; py = e.clientY; posCamera();
+        });
+        canvas.addEventListener("wheel", e => {
+            e.preventDefault();
+            const maxR = Math.max(500, camera.far * 0.35);
+            camRadius = Math.max(4, Math.min(maxR, camRadius + e.deltaY * 0.05));
+            posCamera();
+        }, { passive: false });
+
+        /* Render loop */
+        let modelGroup = null;
+        const clock = new THREE.Clock();
+        (function loop() {
+            requestAnimationFrame(loop);
+            if (autoRot) { camTheta += clock.getDelta() * 0.12; posCamera(); } else clock.getDelta();
+            renderer.render(scene, camera);
+        })();
+
+        /* ── Server-side IFC geometry loader (no browser WASM needed) ── */
+        function buildFromGeometry(geoData) {
+            if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
+            // Outer = world yaw; inner = IFC Z-up → Y-up (avoids Euler order skew).
+            modelGroup = new THREE.Group();
+            const ifcRoot = new THREE.Group();
+            modelGroup.add(ifcRoot);
+            const t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
+            let firstMeshColor = null;
+            let firstMeshVertCount = 0;
+            
+            // Important: JSON numbers are double precision, but Three.js BufferAttributes are float32.
+            // If IFC coordinates are huge (common with georeferenced projects), converting first can lose
+            // small geometric detail. So we compute an offset in double precision and subtract it
+            // before creating Float32Array positions.
+            let minX = Infinity, minY = Infinity, minZ = Infinity;
+            let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+            for (const m of (geoData.meshes || [])) {
+                const v = m && m.vertices;
+                if (!v || v.length < 3) continue;
+                for (let i = 0; i < v.length; i += 3) {
+                    const x = v[i], y = v[i + 1], z = v[i + 2];
+                    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+                }
+            }
+            const cx = (Number.isFinite(minX) && Number.isFinite(maxX)) ? (minX + maxX) / 2 : 0;
+            const cy = (Number.isFinite(minY) && Number.isFinite(maxY)) ? (minY + maxY) / 2 : 0;
+            const cz = (Number.isFinite(minZ) && Number.isFinite(maxZ)) ? (minZ + maxZ) / 2 : 0;
+            const szX = (Number.isFinite(minX) && Number.isFinite(maxX)) ? (maxX - minX) : 0;
+            const szY = (Number.isFinite(minY) && Number.isFinite(maxY)) ? (maxY - minY) : 0;
+            const szZ = (Number.isFinite(minZ) && Number.isFinite(maxZ)) ? (maxZ - minZ) : 0;
+
+            (geoData.meshes || []).forEach(m => {
+                const g = new THREE.BufferGeometry();
+                const v = m.vertices || [];
+                // Build positions with a global double-precision offset to preserve geometry detail.
+                const pos = new Float32Array(v.length);
+                for (let i = 0; i < v.length; i += 3) {
+                    pos[i]     = v[i]     - cx;
+                    pos[i + 1] = v[i + 1] - cy;
+                    pos[i + 2] = v[i + 2] - cz;
+                }
+                g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+                if (m.normals && m.normals.length)
+                    g.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(m.normals), 3));
+                if (m.indices && m.indices.length)
+                {
+                    // WebGL1 doesn't reliably support Uint32 index buffers; prefer Uint16 when safe.
+                    let maxIndex = 0;
+                    for (let i = 0; i < m.indices.length; i++) {
+                        const v = m.indices[i];
+                        if (v > maxIndex) maxIndex = v;
+                    }
+                    const idxArr = maxIndex > 65535 ? new Uint32Array(m.indices) : new Uint16Array(m.indices);
+                    g.setIndex(new THREE.BufferAttribute(idxArr, 1));
+                    if (!_sentIndexLog) {
+                        _sentIndexLog = true;
+                        console.log("[IFCViewer] mesh indices maxIndex=", maxIndex, "using", idxArr.constructor.name);
+                    }
+                }
+                if (!m.normals || !m.normals.length) g.computeVertexNormals();
+                const c = m.color || [0.7, 0.7, 0.7, 1.0];
+                // If alpha is effectively zero, the model can render "blank".
+                // Prefer a visible fallback opacity.
+                let opacity = (typeof c[3] === "number" && Number.isFinite(c[3])) ? c[3] : 1.0;
+                if (opacity < 0.05) opacity = 1.0;
+                const transparent = opacity < 0.99;
+                if (!firstMeshColor) firstMeshColor = c;
+                if (!firstMeshVertCount && m.vertices && m.vertices.length) firstMeshVertCount = m.vertices.length / 3;
+                const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({
+                    color: new THREE.Color(c[0], c[1], c[2]),
+                    transparent: transparent,
+                    opacity: opacity,
+                    side: THREE.DoubleSide
+                }));
+                mesh.userData.bimPhase = m.phase || "structure";
+                mesh.userData.ifcType = m.ifc_type || "";
+                ifcRoot.add(mesh);
+            });
+
+            const maxSz = Math.max(szX, szY, szZ);
+            // Fallback if computed bounds are degenerate.
+            if (Number.isFinite(maxSz) && maxSz > 0) {
+                // Frame the model so it fits in view. For a perspective camera:
+                // distance ~= (radius / tan(fov/2)), with padding.
+                const halfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+                const boundingRadius = maxSz * 0.5;
+                const dist = (boundingRadius / Math.tan(halfFov)) * 1.35; // padding
+                camRadius = Math.max(4, dist);
+            } else {
+                camRadius = 30;
+            }
+            // IFC exports are often Z-up; convert to Three.js Y-up (inner group).
+            ifcRoot.rotation.x = -Math.PI / 2;
+            // Small roll correction — some exports read as slightly “leaning” vs world Y.
+            ifcRoot.rotation.z = -0.13;
+            // World yaw on outer group: clockwise from above ≈ negative Y.
+            modelGroup.rotation.y = -Math.PI / 4;
+
+            // Set a stable default view angle after load. Keep elevation moderate
+            // so the model doesn't start too "top-down" on load.
+            camTheta = -0.55;
+            camPhi = 0.42;
+            // The scene fog was tuned for the old static scene; IFC camera radii
+            // can be much larger, which can fully fog the model (appears blank).
+            // Dynamically extend fog + camera far plane based on model scale.
+            if (scene.fog) {
+                scene.fog.near = Math.min(100, camRadius * 0.15);
+                scene.fog.far  = Math.max(500, camRadius * 3.0);
+            }
+            if (camera) {
+                camera.far = Math.max(camera.far || 500, camRadius * 6.0);
+                camera.updateProjectionMatrix();
+            }
+            if (scene.fog) {
+                console.log("[IFCViewer] updated fog near/far =", scene.fog.near, scene.fog.far, "camera.far =", camera.far);
+            }
+            const t1 = (typeof performance !== "undefined" ? performance.now() : Date.now());
+            console.log("[IFCViewer] buildFromGeometry timeMs =", Math.round(t1 - t0),
+                        "meshes =", (geoData.meshes || []).length,
+                        "firstVertCount =", firstMeshVertCount,
+                        "firstAlpha =", firstMeshColor ? firstMeshColor[3] : null,
+                        "boundsCenter =", { x: cx, y: cy, z: cz },
+                        "boxSize =", { x: szX, y: szY, z: szZ },
+                        "camRadius =", camRadius);
+            autoRot = false;
+            scene.add(modelGroup);
+
+            // Center the model in the BIM card: align world AABB (XZ + ground), aim camera at mid-height,
+            // and nudge slightly along -Z so framing sits more in the middle of the viewport.
+            modelGroup.updateMatrixWorld(true);
+            let wbox = new THREE.Box3().setFromObject(modelGroup);
+            const wcenter = new THREE.Vector3();
+            wbox.getCenter(wcenter);
+            modelGroup.position.x -= wcenter.x;
+            modelGroup.position.z -= wcenter.z;
+            modelGroup.updateMatrixWorld(true);
+            wbox = new THREE.Box3().setFromObject(modelGroup);
+            modelGroup.position.y -= wbox.min.y;
+            modelGroup.updateMatrixWorld(true);
+            wbox = new THREE.Box3().setFromObject(modelGroup);
+            const bH = wbox.max.y - wbox.min.y;
+            camTargetY = Number.isFinite(bH) && bH > 0 ? bH * 0.42 : 0;
+            if (Number.isFinite(maxSz) && maxSz > 0) {
+                modelGroup.position.z -= maxSz * 0.06;
+            }
+            modelGroup.updateMatrixWorld(true);
+            posCamera();
+
+            // Expand ground so large IFC models align with a level “pad” (reduces odd horizon cues).
+            if (Number.isFinite(maxSz) && maxSz > 0) {
+                const pad = Math.max(2000, maxSz * 5);
+                const cur = gnd.geometry && gnd.geometry.parameters;
+                if (!cur || Math.abs(cur.width - pad) > 1) {
+                    gnd.geometry.dispose();
+                    gnd.geometry = new THREE.PlaneGeometry(pad, pad);
+                }
+            }
+
+            const tf = document.getElementById("timeFilter");
+            setPhaseFilter(tf ? tf.value : "all");
+        }
+
+        const _BIM_PHASE_KEYS = new Set(["foundation", "structure", "mep", "cladding", "finishing"]);
+
+        function _meshCountByPhase(ifcRoot, phaseKey) {
+            let n = 0;
+            ifcRoot.children.forEach(ch => {
+                if (!ch.isMesh || ch.userData.isExtrapolation) return;
+                const ph = ch.userData.bimPhase || "structure";
+                if (ph === phaseKey) n++;
+            });
+            return n;
+        }
+
+        /**
+         * All Days → every mesh. Any other known phase → only meshes with that exact `phase` from the IFC.
+         * If that phase has no meshes → hide the model and show “No Mesh Available” (no placeholder geometry).
+         */
+        function setPhaseFilter(phaseKey) {
+            if (phaseEmpty) phaseEmpty.classList.remove("active");
+            const ifcRoot = modelGroup && modelGroup.children[0];
+            if (!ifcRoot) return;
+
+            if (!phaseKey || phaseKey === "all" || !_BIM_PHASE_KEYS.has(phaseKey)) {
+                ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = true; });
+                if (modelGroup) modelGroup.visible = true;
+                gnd.visible = true;
+                return;
+            }
+
+            const n = _meshCountByPhase(ifcRoot, phaseKey);
+            if (n === 0) {
+                ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = false; });
+                if (modelGroup) modelGroup.visible = false;
+                gnd.visible = false;
+                if (phaseEmpty) phaseEmpty.classList.add("active");
+                return;
+            }
+
+            ifcRoot.children.forEach(obj => {
+                if (!obj.isMesh) return;
+                const p = obj.userData.bimPhase || "structure";
+                obj.visible = p === phaseKey;
+            });
+            if (modelGroup) modelGroup.visible = true;
+            gnd.visible = true;
+        }
+
+        async function loadIFC(fileUrl, projectId) {
+            if (overlay) overlay.classList.add("active");
+            if (noModel) noModel.classList.remove("active");
+            if (phaseEmpty) phaseEmpty.classList.remove("active");
+            if (phaseTag) phaseTag.textContent = "Loading model…";
+            if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
+            const txtEl = document.getElementById("bimLoadingText");
+            const pid = projectId || new URLSearchParams(window.location.search).get("project") || "";
+            try {
+                if (!pid) throw new Error("No project ID");
+
+                console.log("[IFCViewer] loadIFC pid =", pid);
+                if (txtEl) txtEl.textContent = "Requesting geometry from server…";
+
+                const resp = await fetch("/api/project/" + encodeURIComponent(pid) + "/ifc-geometry");
+                console.log("[IFCViewer] geometry fetch resp status =", resp.status, "ok =", resp.ok);
+                const geoData = await resp.json();
+                if (!resp.ok) {
+                    const status = geoData && geoData.status ? geoData.status : ("HTTP " + resp.status);
+                    throw new Error(status);
+                }
+                if (!geoData.meshes || geoData.meshes.length === 0) throw new Error(geoData.status || "Server returned 0 meshes");
+                console.log("[IFCViewer] geometry meshCount =", geoData.meshes.length, "status =", geoData.status);
+                if (txtEl) txtEl.textContent = "Rendering " + geoData.meshes.length + " meshes…";
+                buildFromGeometry(geoData);
+                if (overlay) overlay.classList.remove("active");
+                if (noModel) noModel.classList.remove("active");
+                if (phaseTag) phaseTag.textContent = "IFC Model Loaded";
+            } catch(err) {
+                // Show the REAL error in the phase tag so it's visible on screen
+                console.error("[IFCViewer]", err.message);
+                if (overlay) overlay.classList.remove("active");
+                if (phaseEmpty) phaseEmpty.classList.remove("active");
+                if (noModel) noModel.classList.add("active");
+                if (phaseTag) {
+                    const msg = err.message || "";
+                    if (msg.includes("no_ifc_for_project")) {
+                        phaseTag.textContent = "No image available";
+                    } else if (msg.includes("ifc_dir_missing")) {
+                        phaseTag.textContent = "⚠ IFC storage not available";
+                    } else if (msg.includes("ifcopenshell_missing")) {
+                        phaseTag.textContent = "⚠ IFC engine not installed on server";
+                    } else if (msg.includes("parse_failed")) {
+                        phaseTag.textContent = "⚠ IFC parse failed";
+                    } else {
+                        phaseTag.textContent = "⚠ " + msg;
+                    }
+                }
+            } finally {
+                // Ensure the overlay spinner never keeps spinning forever.
+                if (overlay) overlay.classList.remove("active");
+                // Also stop any automatic camera rotation after load attempt.
+                autoRot = false;
+            }
+        }
+
+        function showNoModel() {
+            overlay.classList.remove("active");
+            noModel.classList.add("active");
+            if (phaseEmpty) phaseEmpty.classList.remove("active");
+            if (phaseTag) phaseTag.textContent = "No image available";
+        }
+
+        // IFC load is triggered from dashboard.js after the project switcher resolves
+        // ACTIVE_PROJECT_ID (URL + localStorage + first project). Auto-loading from
+        // ?project= here only missed that path and required a full refresh.
+
+        return { loadIFC, showNoModel, buildFromGeometry, setPhaseFilter };
+    })();
+    </script>
+</body>
+</html>

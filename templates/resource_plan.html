@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas AI — Resource Plan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body:       #0E0E10;
+            --bg-card:       #18181B;
+            --bg-panel:      #1E1E21;
+            --bg-hover:      #26262A;
+            --text-main:     #F4F4F5;
+            --text-muted:    #71717A;
+            --text-mid:      #A1A1AA;
+            --accent-blue:   #3B82F6;
+            --accent-indigo: #6366F1;
+            --accent-green:  #22C55E;
+            --accent-orange: #F59E0B;
+            --accent-red:    #EF4444;
+            --accent-teal:   #14B8A6;
+            --border:        #27272A;
+            --border-bright: #3F3F46;
+            --nav-height:    66px;
+
+            /* Kanban column accent colours */
+            --col-scheduled: #3B82F6;
+            --col-progress:  #F59E0B;
+            --col-review:    #A855F7;
+            --col-done:      #22C55E;
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* ── NAV ─────────────────────────────────────────── */
+        nav {
+            height: var(--nav-height);
+            background: rgba(14,14,16,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+
+        .nav-brand {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .brand-dot {
+            width: 8px; height: 8px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-blue);
+        }
+
+        .nav-center { display: flex; gap: 0.25rem; }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.4rem 0.85rem;
+            border-radius: 7px;
+            transition: color 0.2s, background 0.2s;
+            position: relative;
+        }
+
+        .nav-link:hover  { color: var(--text-main); background: var(--bg-hover); }
+        .nav-link.active { color: var(--text-main); background: var(--bg-panel); }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px; height: 2px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        .nav-right { display: flex; align-items: center; gap: 1rem; }
+
+        .bell-wrap { position: relative; cursor: pointer; padding: 6px; border-radius: 8px; transition: background 0.2s; }
+        .bell-wrap:hover { background: var(--bg-hover); }
+        .icon-bell { width: 18px; height: 18px; stroke: var(--text-muted); display: block; }
+        .bell-badge { display: none; position: absolute; top: 2px; right: 2px; background: var(--accent-red); color: #fff; font-size: 0.55rem; font-weight: 700; width: 13px; height: 13px; border-radius: 50%; align-items: center; justify-content: center; }
+        .bell-badge.visible { display: flex; }
+
+        .user-menu-wrap { position: relative; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border-bright); cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
+        .avatar:hover { border-color: var(--accent-blue); transform: scale(1.05); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* User dropdown */
+        .user-dropdown { display: none; position: absolute; top: calc(100% + 12px); right: 0; background: #1C1C1E; border: 1px solid #3A3A3A; border-radius: 12px; min-width: 210px; box-shadow: 0 16px 40px rgba(0,0,0,.6); z-index: 500; overflow: hidden; animation: ddFade .15s ease; }
+        @keyframes ddFade { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+        .user-dropdown.open { display: block; }
+        .user-dropdown-header { padding: .85rem 1rem; display: flex; align-items: center; gap: .65rem; }
+        .user-dropdown-avatar { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; border: 2px solid #444; flex-shrink: 0; }
+        .user-dropdown-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-dropdown-name { font-size: .85rem; font-weight: 700; color: #fff; line-height: 1.2; display: block; }
+        .user-dropdown-role { font-size: .72rem; color: #888; margin-top: 2px; display: block; }
+        .user-dropdown-divider { height: 1px; background: #2D2D2D; }
+        .user-dropdown-item { display: flex; align-items: center; gap: .6rem; padding: .6rem 1rem; font-size: .85rem; color: #ccc; text-decoration: none; background: none; border: none; width: 100%; text-align: left; cursor: pointer; font-family: inherit; transition: background .15s, color .15s; }
+        .user-dropdown-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+        .user-dropdown-item svg { width: 15px; height: 15px; opacity: .7; flex-shrink: 0; }
+        .user-dropdown-item.logout-item { color: #E57373; margin-bottom: 2px; }
+        .user-dropdown-item.logout-item:hover { background: rgba(229,115,115,.1); color: #ef9a9a; }
+
+        /* Logout modal */
+        .logout-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 9000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .logout-overlay.open { display: flex; }
+        .logout-modal { background: #1C1C1E; border: 1px solid #3A3A3A; border-radius: 16px; padding: 2rem; width: 340px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,.7); animation: ddFade .2s ease; }
+        .logout-modal-icon { width: 48px; height: 48px; background: rgba(229,115,115,.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+        .logout-modal-icon svg { width: 24px; height: 24px; stroke: #E57373; }
+        .logout-modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+        .logout-modal p { font-size: .875rem; color: #888; margin-bottom: 1.5rem; line-height: 1.5; }
+        .logout-modal-actions { display: flex; gap: .75rem; }
+        .logout-modal-actions button { flex: 1; padding: .65rem; border-radius: 8px; font-size: .875rem; font-weight: 600; cursor: pointer; font-family: inherit; border: 1px solid transparent; transition: .2s; }
+        .btn-cancel-logout { background: transparent; border-color: #444 !important; color: #aaa; }
+        .btn-cancel-logout:hover { border-color: #666 !important; color: #fff; }
+        .btn-confirm-logout { background: rgba(229,115,115,.15); border-color: rgba(229,115,115,.4) !important; color: #E57373; }
+        .btn-confirm-logout:hover { background: rgba(229,115,115,.25); color: #ef9a9a; }
+
+        /* ── MAIN LAYOUT ─────────────────────────────────── */
+        main {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        /* Project switcher — same column as Kanban header / section-title blue bar */
+        .rp-project-toolbar {
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.85rem;
+        }
+
+        .rp-project-toolbar #projectSelect {
+            margin: 0;
+        }
+
+        h2.section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2.section-title::before {
+            content: '';
+            display: block;
+            width: 3px; height: 16px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
+        /* ── KANBAN SECTION ──────────────────────────────── */
+        .kanban-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .kanban-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .kanban-search {
+            position: relative;
+        }
+
+        .kanban-search input {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.85rem 0.5rem 2.2rem;
+            width: 220px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .kanban-search input:focus { border-color: var(--accent-blue); }
+        .kanban-search input::placeholder { color: var(--text-muted); }
+
+        .search-icon-inner {
+            position: absolute;
+            left: 0.7rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .filter-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.45rem 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-chip:hover,
+        .filter-chip.active { color: var(--text-main); background: var(--bg-hover); border-color: var(--border-bright); }
+
+        .add-task-btn {
+            background: var(--accent-blue);
+            border: none;
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .add-task-btn:hover { background: #2563EB; transform: translateY(-1px); }
+
+        /* Kanban Board */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .kanban-col {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .col-title-wrap { display: flex; align-items: center; gap: 0.6rem; }
+
+        .col-accent {
+            width: 10px; height: 10px;
+            border-radius: 3px;
+        }
+
+        .col-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 0.2px;
+        }
+
+        .col-count {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--bg-hover);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .col-cards {
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        /* ── TASK CARDS ─────────────────────────────────── */
+        .task-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            padding: 1rem 1.1rem;
+            cursor: grab;
+            transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+            border-radius: 11px 0 0 11px;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            border-color: var(--border-bright);
+        }
+
+        .task-card:active { cursor: grabbing; }
+
+        .task-card-delete {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s, background 0.15s;
+        }
+        .task-card-delete:hover {
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.12);
+        }
+
+        /* Column accent border colours */
+        .kanban-col:nth-child(1) .task-card::before { background: var(--col-scheduled); }
+        .kanban-col:nth-child(2) .task-card::before { background: var(--col-progress); }
+        .kanban-col:nth-child(3) .task-card::before { background: var(--col-review); }
+        .kanban-col:nth-child(4) .task-card::before { background: var(--col-done); }
+
+        .task-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.6rem;
+        }
+
+        .task-top-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-shrink: 0;
+        }
+
+        .task-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.35;
+            flex: 1;
+            margin-right: 0.5rem;
+        }
+
+        .priority-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 7px;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
+
+        .prio-high   { background: rgba(239,68,68,0.15);  color: #EF4444; }
+        .prio-med    { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .prio-low    { background: rgba(34,197,94,0.15);  color: #22C55E; }
+
+        .task-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin-bottom: 0.85rem;
+        }
+
+        /* Schedule progress bar */
+        .task-progress-wrap { margin-bottom: 0.85rem; }
+
+        .task-progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .task-progress-label span:last-child { color: var(--text-mid); font-weight: 600; }
+
+        .progress-track {
+            width: 100%;
+            height: 5px;
+            background: var(--bg-hover);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+
+        /* Task footer */
+        .task-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: var(--bg-hover);
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+
+        .meta-pill svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+        .days-pill {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 5px;
+        }
+
+        .days-urgent  { background: rgba(239,68,68,0.15);  color: #EF4444; }
+        .days-soon    { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .days-ok      { background: rgba(34,197,94,0.15);  color: #22C55E; }
+        .days-done    { background: rgba(113,113,122,0.2); color: #71717A; }
+
+        /* Assignee avatars */
+        .task-assignees {
+            display: flex;
+        }
+
+        .mini-avatar {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            border: 2px solid var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-mid);
+            margin-left: -6px;
+        }
+
+        .mini-avatar:first-child { margin-left: 0; }
+
+        /* Drag-over column highlight */
+        .kanban-col.drag-over {
+            border-color: var(--accent-blue);
+            background: rgba(59,130,246,0.05);
+        }
+
+        .drag-ghost { opacity: 0.35; }
+
+        /* Drop placeholder */
+        .drop-placeholder {
+            border: 2px dashed var(--border-bright);
+            border-radius: 11px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 1.5rem; right: 1.5rem;
+            background: #252528;
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 9999;
+            pointer-events: none;
+            max-width: 320px;
+            border: 1px solid var(--border-bright);
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        #toast.info    { border-left: 4px solid var(--accent-blue); }
+        #toast.success { border-left: 4px solid var(--accent-green); }
+        #toast.warning { border-left: 4px solid var(--accent-orange); }
+
+        /* Detail modal */
+        .task-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 8000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .task-modal-overlay.open { display: flex; }
+
+        .task-modal {
+            background: #1C1C1E;
+            border: 1px solid #3A3A3A;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 460px;
+            max-width: 90vw;
+            box-shadow: 0 24px 60px rgba(0,0,0,.7);
+            animation: ddFade .2s ease;
+        }
+
+        .task-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-modal h3 { font-size: 1.15rem; font-weight: 700; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.3rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover { color: var(--text-main); }
+
+        .modal-field { margin-bottom: 1.25rem; }
+        .modal-field label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.4rem; }
+        .modal-field p { font-size: 0.9rem; color: var(--text-main); line-height: 1.5; }
+
+        .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+
+        .modal-field-inline label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.4rem; }
+        .modal-field-inline p { font-size: 0.9rem; color: var(--text-main); }
+
+        .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+        .modal-actions button { flex: 1; padding: 0.65rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; border: 1px solid transparent; transition: .2s; }
+        .btn-modal-secondary { background: transparent; border-color: #444 !important; color: #aaa; }
+        .btn-modal-secondary:hover { border-color: #666 !important; color: #fff; }
+        .btn-modal-primary { background: var(--accent-blue); color: #fff; }
+        .btn-modal-primary:hover { background: #2563EB; }
+
+
+        /* ── TASK DETAIL MODAL — edit/view toggle ────────────── */
+
+        /* Widen modal in edit mode */
+        .task-modal.editing { width: 520px; }
+
+        /* Toggle primitives */
+        .task-modal .edit-only  { display: none !important; }
+        .task-modal.editing .edit-only  { display: block !important; }
+        .task-modal.editing .modal-row.edit-only { display: grid  !important; }
+        .task-modal.editing .view-only  { display: none  !important; }
+
+        /* Edit pencil button in header */
+        .btn-edit-toggle {
+            background: none;
+            border: 1px solid var(--border-bright);
+            color: var(--text-muted);
+            border-radius: 6px;
+            padding: 0.3rem 0.55rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: color 0.2s, border-color 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-edit-toggle:hover { color: var(--text-main); border-color: var(--accent-blue); }
+
+        /* Large name input that replaces the <h3> in edit mode */
+        .modal-name-input {
+            width: 100%;
+            background: #111113;
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: "DM Sans", sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .modal-name-input:focus { border-color: var(--accent-blue); }
+        .modal-name-input.field-error { border-color: var(--accent-red); }
+
+        /* Inline inputs inside existing modal-field-inline slots */
+        .modal-field-inline input,
+        .modal-field-inline select,
+        .modal-field textarea {
+            width: 100%;
+            background: #111113;
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: "DM Sans", sans-serif;
+            font-size: 0.875rem;
+            padding: 0.55rem 0.75rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .modal-field-inline input:focus,
+        .modal-field-inline select:focus,
+        .modal-field textarea:focus { border-color: var(--accent-blue); }
+        .modal-field-inline select option,
+        .modal-field textarea { background: #1C1C1E; }
+        .modal-field textarea { resize: vertical; min-height: 72px; }
+
+        .modal-name-err {
+            font-size: 0.72rem;
+            color: var(--accent-red);
+            margin-top: 0.3rem;
+            display: none;
+        }
+        .modal-name-err.visible { display: block; }
+
+
+        /* ── ADD TASK MODAL ─────────────────────────────────── */
+        .add-task-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 8500;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .add-task-overlay.open { display: flex; }
+
+        .add-task-modal {
+            background: #1C1C1E;
+            border: 1px solid #3A3A3A;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 520px;
+            max-width: 92vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0,0,0,.75);
+            animation: ddFade .2s ease;
+        }
+
+        .add-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.75rem;
+        }
+        .add-task-header h3 { font-size: 1.15rem; font-weight: 700; }
+
+        .form-field { margin-bottom: 1.1rem; }
+        .form-field label {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+        .form-field input,
+        .form-field textarea,
+        .form-field select {
+            width: 100%;
+            background: #111113;
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: "DM Sans", sans-serif;
+            font-size: 0.875rem;
+            padding: 0.6rem 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-field input:focus,
+        .form-field textarea:focus,
+        .form-field select:focus { border-color: var(--accent-blue); }
+        .form-field textarea { resize: vertical; min-height: 80px; }
+        .form-field select option { background: #1C1C1E; }
+        .form-field input.field-error,
+        .form-field textarea.field-error { border-color: var(--accent-red); }
+        .field-error-msg {
+            font-size: 0.72rem;
+            color: var(--accent-red);
+            margin-top: 0.3rem;
+            display: none;
+        }
+        .field-error-msg.visible { display: block; }
+        .form-row   { display: grid; grid-template-columns: 1fr 1fr;     gap: 1rem; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .form-hint  { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+        .add-task-actions { display: flex; gap: 0.75rem; margin-top: 1.75rem; }
+        .add-task-actions button {
+            flex: 1;
+            padding: 0.65rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: "DM Sans", sans-serif;
+            border: 1px solid transparent;
+            transition: .2s;
+        }
+        .btn-add-cancel { background: transparent; border-color: #444 !important; color: #aaa; }
+        .btn-add-cancel:hover { border-color: #666 !important; color: #fff; }
+        .btn-add-submit { background: var(--accent-blue); color: #fff; }
+        .btn-add-submit:hover { background: #2563EB; }
+        .btn-add-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Resource Plan Gantt (same layout as wizard Step 5, read-only) ── */
+        .rp-gantt-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem 1.5rem;
+        }
+
+        .rp-gantt-section h2.section-title {
+            margin-bottom: 0.65rem;
+        }
+
+        .rp-gantt-note {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 1.15rem;
+            line-height: 1.5;
+            max-width: 52rem;
+        }
+
+        .rp-gantt-container { min-height: 2rem; }
+
+        .rp-gantt-footer {
+            margin-top: 1rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .gantt-wrap { overflow-x: auto; }
+        .gantt-header-row { display: flex; margin-bottom: 4px; padding-left: 212px; }
+        .gantt-day-label {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            font-family: "JetBrains Mono", monospace;
+            min-width: 60px;
+            line-height: 1.15;
+        }
+        .gantt-day-label--simple {
+            padding-top: 0.2rem;
+            justify-content: center;
+        }
+        .gantt-hd-dow {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .gantt-hd-date {
+            font-size: 0.68rem;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .gantt-task-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            min-height: 38px;
+        }
+        .gantt-task-label-cell {
+            width: 212px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding-right: 0.5rem;
+        }
+        .gantt-task-label {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.78rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gantt-row-delete {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .gantt-row-delete:hover {
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.12);
+        }
+        .gantt-track {
+            flex: 1;
+            height: 28px;
+            background: var(--bg-hover);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            min-width: 400px;
+        }
+        .gantt-bar {
+            position: absolute;
+            top: 3px;
+            height: 22px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 8px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+            cursor: default;
+            transition: filter 0.2s;
+        }
+        .gantt-bar--draggable {
+            cursor: grab;
+            touch-action: none;
+        }
+        .gantt-bar-dragging {
+            cursor: grabbing;
+            filter: brightness(1.12);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+        }
+        .gantt-bar-readonly:hover { filter: brightness(1.08); }
+
+        .gantt-edit-deps {
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 0.5rem 0.65rem;
+            background: var(--bg-hover);
+        }
+        .gantt-dep-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem 0.75rem;
+            align-items: center;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.78rem;
+        }
+        .gantt-dep-row:last-child { border-bottom: none; }
+        .gantt-dep-label { display: flex; align-items: center; gap: 0.45rem; min-width: 0; cursor: pointer; }
+        .gantt-dep-cb { flex-shrink: 0; }
+        .gantt-dep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-main); }
+        .gantt-dep-id { font-family: "JetBrains Mono", monospace; font-size: 0.65rem; color: var(--text-muted); flex-shrink: 0; }
+        .gantt-dep-lag-wrap {
+            display: flex; flex-direction: column; gap: 2px;
+            font-size: 0.65rem; color: var(--text-muted);
+            min-width: 4.5rem;
+        }
+        .gantt-dep-lag {
+            padding: 4px 6px;
+            font-size: 0.72rem;
+            min-width: 0;
+            background: #111113;
+            border: 1px solid var(--border-bright);
+            border-radius: 6px;
+            color: var(--text-main);
+        }
+
+        .btn-rp-secondary {
+            background: transparent;
+            border: 1px solid var(--border-bright);
+            color: var(--text-mid);
+            font-family: "DM Sans", sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-rp-secondary:hover { border-color: var(--accent-blue); color: var(--text-main); }
+
+        .rp-gantt-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            z-index: 9200;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .rp-gantt-modal-overlay.open { display: flex; }
+        .rp-gantt-modal-box {
+            background: #1C1C1E;
+            border: 1px solid var(--border-bright);
+            border-radius: 14px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0,0,0,.7);
+        }
+        .rp-gantt-modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .rp-gantt-form-label {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 0.35rem;
+            font-weight: 600;
+        }
+        .rp-gantt-form-input {
+            width: 100%;
+            background: #111113;
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: "DM Sans", sans-serif;
+            font-size: 0.875rem;
+            padding: 0.55rem 0.75rem;
+            outline: none;
+        }
+        .rp-gantt-form-input:focus { border-color: var(--accent-blue); }
+        .rp-gantt-modal-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        .rp-gantt-modal-actions button {
+            flex: 1;
+            padding: 0.65rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: "DM Sans", sans-serif;
+            border: 1px solid transparent;
+        }
+        .btn-rp-gantt-cancel { background: transparent; border-color: #444 !important; color: #aaa; }
+        .btn-rp-gantt-cancel:hover { border-color: #666 !important; color: #fff; }
+        .btn-rp-gantt-save { background: var(--accent-blue); color: #fff; }
+        .btn-rp-gantt-save:hover { background: #2563EB; }
+        .btn-rp-gantt-delete {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            color: var(--accent-red);
+            font-family: "DM Sans", sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .btn-rp-gantt-delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--accent-red);
+        }
+
+        .btn-modal-danger {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.45) !important;
+            color: var(--accent-red) !important;
+        }
+        .btn-modal-danger:hover {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: var(--accent-red) !important;
+            color: #fca5a5 !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .kanban-board { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board { grid-template-columns: 1fr; }
+            .gantt-task-label-cell { width: 148px; }
+            .gantt-header-row { padding-left: 148px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── NAV ──────────────────────────────────────────── -->
+    <nav>
+        <div class="nav-brand">
+            <span class="brand-dot"></span>
+            Veritas AI Construction
+        </div>
+        <div class="nav-center">
+            <a href="/dashboard"      class="nav-link" id="navLinkHome">Home</a>
+            <a href="/new-project"    class="nav-link" id="navLinkProjects">Projects</a>
+            <a href="/safety"         class="nav-link" id="navLinkRecentAlerts">Recent Alerts</a>
+            <a href="/resource-plan"  class="nav-link active" id="navLinkResourcePlan">Resource Plan</a>
+            <a href="/vr-training"    class="nav-link" id="navLinkVrTraining">VR Training Status</a>
+            <a href="/resourciist"    class="nav-link" id="navLinkResourciist">Resource List</a>
+        </div>
+        <div class="nav-right">
+            <div class="bell-wrap" onclick="showToast('No new notifications', 'info')">
+                <svg class="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="bell-badge visible" id="bellBadge">3</span>
+            </div>
+            <div class="user-menu-wrap">
+                <div class="avatar" onclick="toggleUserMenu()">
+                    <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <div class="user-dropdown-header">
+                        <div class="user-dropdown-avatar">
+                            <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+                        </div>
+                        <div>
+                            <span class="user-dropdown-name">D. Nottage</span>
+                            <span class="user-dropdown-role">Lead Instructor</span>
+                        </div>
+                    </div>
+                    <div class="user-dropdown-divider"></div>
+                    <a href="/dashboard" class="user-dropdown-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        My Profile
+                    </a>
+                    <div class="user-dropdown-divider"></div>
+                    <button class="user-dropdown-item logout-item" onclick="showLogoutModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── MAIN ─────────────────────────────────────────── -->
+    <main>
+        <!-- ── KANBAN SECTION ─────────────────────────────── -->
+        <section>
+            <div class="rp-project-toolbar">
+                <div id="projectSwitcher"></div>
+            </div>
+            <div class="kanban-header">
+                <h2 class="section-title" style="margin-bottom:0;">Upcoming Schedule — Kanban Board</h2>
+                <div class="kanban-controls">
+                    <div class="kanban-search">
+                        <span class="search-icon-inner">🔍</span>
+                        <input type="text" id="kanbanSearch" placeholder="Search tasks…" oninput="filterCards(this.value)">
+                    </div>
+                    <button class="filter-chip active" onclick="filterByPriority('all', this)">All</button>
+                    <button class="filter-chip" onclick="filterByPriority('high', this)">High</button>
+                    <button class="filter-chip" onclick="filterByPriority('med', this)">Medium</button>
+                    <button class="add-task-btn" onclick="openAddTaskModal()">
+                        <span>+</span> Add Task
+                    </button>
+                </div>
+            </div>
+
+            <div class="kanban-board" id="kanbanBoard">
+
+                <!-- COLUMN 1: SCHEDULED -->
+                <div class="kanban-col" id="col-scheduled"
+                     ondragover="onDragOver(event, 'scheduled')"
+                     ondragleave="onDragLeave(event)"
+                     ondrop="onDrop(event, 'scheduled')">
+                    <div class="col-header">
+                        <div class="col-title-wrap">
+                            <span class="col-accent" style="background:var(--col-scheduled);"></span>
+                            <span class="col-title">Scheduled</span>
+                        </div>
+                        <span class="col-count" id="count-scheduled">0</span>
+                    </div>
+                    <div class="col-cards" id="cards-scheduled"></div>
+                </div>
+
+                <!-- COLUMN 2: IN PROGRESS -->
+                <div class="kanban-col" id="col-in_progress"
+                     ondragover="onDragOver(event, 'in_progress')"
+                     ondragleave="onDragLeave(event)"
+                     ondrop="onDrop(event, 'in_progress')">
+                    <div class="col-header">
+                        <div class="col-title-wrap">
+                            <span class="col-accent" style="background:var(--col-progress);"></span>
+                            <span class="col-title">In Progress</span>
+                        </div>
+                        <span class="col-count" id="count-in_progress">0</span>
+                    </div>
+                    <div class="col-cards" id="cards-in_progress"></div>
+                </div>
+
+                <!-- COLUMN 3: UNDER REVIEW -->
+                <div class="kanban-col" id="col-review"
+                     ondragover="onDragOver(event, 'review')"
+                     ondragleave="onDragLeave(event)"
+                     ondrop="onDrop(event, 'review')">
+                    <div class="col-header">
+                        <div class="col-title-wrap">
+                            <span class="col-accent" style="background:var(--col-review);"></span>
+                            <span class="col-title">Under Review</span>
+                        </div>
+                        <span class="col-count" id="count-review">0</span>
+                    </div>
+                    <div class="col-cards" id="cards-review"></div>
+                </div>
+
+                <!-- COLUMN 4: COMPLETED -->
+                <div class="kanban-col" id="col-completed"
+                     ondragover="onDragOver(event, 'completed')"
+                     ondragleave="onDragLeave(event)"
+                     ondrop="onDrop(event, 'completed')">
+                    <div class="col-header">
+                        <div class="col-title-wrap">
+                            <span class="col-accent" style="background:var(--col-done);"></span>
+                            <span class="col-title">Completed</span>
+                        </div>
+                        <span class="col-count" id="count-completed">0</span>
+                    </div>
+                    <div class="col-cards" id="cards-completed"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ── GANTT (same chart as wizard “Review Resource Plan”) ── -->
+        <section class="rp-gantt-section" id="rpGanttSection" aria-labelledby="rpGanttHeading">
+            <h2 class="section-title" id="rpGanttHeading">Published schedule — Gantt</h2>
+            <p class="rp-gantt-note">
+                Same interactive Gantt as the New Project wizard: drag a bar to reschedule, or click to edit name, start, duration, and predecessors (working-day CPM + resource pools). Kanban tasks you add appear here and in the wizard; saving updates the project for everyone.
+            </p>
+            <div id="rpGanttContainer" class="rp-gantt-container">
+                <p class="rp-gantt-placeholder" style="color:var(--text-muted);font-size:0.85rem;">
+                    Select a project to load the schedule chart.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ── TASK DETAIL / EDIT MODAL ─────────────────────── -->
+    <!-- Adding class "editing" to .task-modal switches all    -->
+    <!-- .view-only elements off and .edit-only elements on.   -->
+    <div class="task-modal-overlay" id="taskModal">
+        <div class="task-modal" id="taskModalInner">
+
+            <!-- Header: title (view) | name input (edit) + edit btn + close -->
+            <div class="task-modal-header">
+                <h3 id="modalTitle" class="view-only" style="flex:1;">Task Detail</h3>
+                <div class="edit-only" style="flex:1;margin-right:0.75rem;">
+                    <input type="text" id="ed-name" class="modal-name-input" maxlength="80" placeholder="Task name">
+                    <div class="modal-name-err" id="ed-name-err">Task name is required.</div>
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-shrink:0;">
+                    <button class="btn-edit-toggle view-only" onclick="enterEditMode()" title="Edit this task">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="modal-field">
+                <label>Description</label>
+                <p id="modalDesc" class="view-only">—</p>
+                <textarea id="ed-desc" class="edit-only" rows="3"></textarea>
+            </div>
+
+            <!-- Schedule % + Days Remaining -->
+            <div class="modal-row">
+                <div class="modal-field-inline">
+                    <label>Schedule Status</label>
+                    <p id="modalStatus" class="view-only">—</p>
+                    <input type="number" id="ed-pct" class="edit-only" min="0" max="100" placeholder="0">
+                </div>
+                <div class="modal-field-inline">
+                    <label>Days Remaining</label>
+                    <p id="modalDays" class="view-only">—</p>
+                    <input type="number" id="ed-days" class="edit-only" min="0" max="365" placeholder="7">
+                </div>
+            </div>
+
+            <!-- Start date + duration (working days) — same schedule fields as Gantt -->
+            <div class="modal-row">
+                <div class="modal-field-inline">
+                    <label>Start date</label>
+                    <p id="modalStart" class="view-only">—</p>
+                    <input type="date" id="ed-start" class="edit-only">
+                </div>
+                <div class="modal-field-inline">
+                    <label>Duration (working days)</label>
+                    <p id="modalDurWd" class="view-only">—</p>
+                    <input type="number" id="ed-duration-wd" class="edit-only" min="1" step="1" placeholder="Optional">
+                </div>
+            </div>
+
+            <div class="modal-row">
+                <div class="modal-field-inline">
+                    <label>Task cost</label>
+                    <p id="modalCost" class="view-only">—</p>
+                    <input type="number" id="ed-cost" class="edit-only" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+                </div>
+                <div class="modal-field-inline"></div>
+            </div>
+
+            <div class="modal-row">
+                <div class="modal-field-inline">
+                    <label>Inspection</label>
+                    <p id="modalInspection" class="view-only">—</p>
+                    <div class="edit-only" style="display:flex;flex-direction:column;gap:0.35rem;">
+                        <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.85rem;cursor:pointer;color:var(--text-main);">
+                            <input type="checkbox" id="ed-inspection-needed" onchange="window.syncRpKanbanInspectionFields()">
+                            <span>Inspection needed for this task</span>
+                        </label>
+                        <label for="ed-inspection-date" id="ed-inspection-date-label" style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;opacity:0.5;">Inspection date</label>
+                        <input type="date" id="ed-inspection-date" disabled style="width:100%;background:#121212;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-main);font-size:0.875rem;font-family:inherit;">
+                    </div>
+                </div>
+                <div class="modal-field-inline"></div>
+            </div>
+
+            <!-- Priority + Assigned To -->
+            <div class="modal-row">
+                <div class="modal-field-inline">
+                    <label>Priority</label>
+                    <p id="modalPriority" class="view-only">—</p>
+                    <select id="ed-priority" class="edit-only">
+                        <option value="high">&#x1F534; High</option>
+                        <option value="med">&#x1F7E1; Medium</option>
+                        <option value="low">&#x1F7E2; Low</option>
+                    </select>
+                </div>
+                <div class="modal-field-inline">
+                    <label>Assigned To</label>
+                    <p id="modalAssigned" class="view-only">—</p>
+                    <input type="text" id="ed-assignees" class="edit-only" placeholder="DN, JS">
+                </div>
+            </div>
+
+            <!-- Category + Status (edit mode only row) -->
+            <div class="modal-row edit-only">
+                <div class="modal-field-inline">
+                    <label>Category</label>
+                    <select id="ed-category">
+                        <option value="Foundation">&#x1F3D7;&#xFE0F; Foundation</option>
+                        <option value="Logistics">&#x1F69B; Logistics</option>
+                        <option value="Site Work">&#x26CF;&#xFE0F; Site Work</option>
+                        <option value="Structural">&#x1F529; Structural</option>
+                        <option value="Safety">&#x26A0;&#xFE0F; Safety</option>
+                        <option value="MEP">&#x26A1; MEP</option>
+                        <option value="QA / QC">&#x2705; QA / QC</option>
+                        <option value="Procurement">&#x1F4E6; Procurement</option>
+                    </select>
+                </div>
+                <div class="modal-field-inline">
+                    <label>Status</label>
+                    <select id="ed-status">
+                        <option value="scheduled">Scheduled</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="review">Under Review</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Progress bar (always visible, updates live in edit mode) -->
+            <div class="modal-field">
+                <label>Progress</label>
+                <div class="task-progress-wrap" style="margin-bottom:0">
+                    <div class="progress-track" style="height:8px">
+                        <div class="progress-fill" id="modalProgressBar" style="background:var(--accent-blue)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View-mode actions -->
+            <div class="modal-actions view-only">
+                <button class="btn-modal-secondary" onclick="closeModal()">Close</button>
+                <button class="btn-modal-danger" onclick="deleteTaskFromModal()">Delete</button>
+                <button class="btn-modal-primary" onclick="markDone()">Mark Complete</button>
+            </div>
+            <!-- Edit-mode actions -->
+            <div class="modal-actions edit-only">
+                <button class="btn-modal-secondary" onclick="exitEditMode()">Cancel</button>
+                <button class="btn-modal-danger" onclick="deleteTaskFromModal()">Delete</button>
+                <button class="btn-modal-primary" onclick="saveTaskEdits()">Save Changes</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── ADD TASK MODAL ───────────────────────────────── -->
+    <div class="add-task-overlay" id="addTaskModal">
+        <div class="add-task-modal">
+            <div class="add-task-header">
+                <h3>Add New Task</h3>
+                <button class="modal-close" onclick="closeAddTaskModal()">&#x2715;</button>
+            </div>
+
+            <div class="form-field">
+                <label for="at-name">Task Name <span style="color:var(--accent-red)">*</span></label>
+                <input type="text" id="at-name" placeholder="e.g. Roof Insulation Install" maxlength="80">
+                <div class="field-error-msg" id="at-name-err">Task name is required.</div>
+            </div>
+
+            <div class="form-field">
+                <label for="at-desc">Description</label>
+                <textarea id="at-desc" placeholder="What needs to be done, any dependencies or notes…"></textarea>
+            </div>
+
+            <div class="form-field">
+                <label for="at-start-date">Planned start (Gantt)</label>
+                <input type="date" id="at-start-date">
+                <div class="form-hint">Optional. Bar begins on the first working day on or after this date. Leave empty to use the project start date.</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="at-category">Category</label>
+                    <select id="at-category">
+                        <option value="Foundation">&#x1F3D7;&#xFE0F; Foundation</option>
+                        <option value="Logistics">&#x1F69B; Logistics</option>
+                        <option value="Site Work">&#x26CF;&#xFE0F; Site Work</option>
+                        <option value="Structural">&#x1F529; Structural</option>
+                        <option value="Safety">&#x26A0;&#xFE0F; Safety</option>
+                        <option value="MEP">&#x26A1; MEP</option>
+                        <option value="QA / QC">&#x2705; QA / QC</option>
+                        <option value="Procurement">&#x1F4E6; Procurement</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="at-priority">Priority</label>
+                    <select id="at-priority">
+                        <option value="high">&#x1F534; High</option>
+                        <option value="med" selected>&#x1F7E1; Medium</option>
+                        <option value="low">&#x1F7E2; Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div class="form-field">
+                    <label for="at-status">Status</label>
+                    <select id="at-status">
+                        <option value="scheduled" selected>Scheduled</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="review">Under Review</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="at-days">Days Remaining</label>
+                    <input type="number" id="at-days" min="0" max="365" value="7">
+                </div>
+                <div class="form-field">
+                    <label for="at-pct">Schedule %</label>
+                    <input type="number" id="at-pct" min="0" max="100" value="0">
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label for="at-assignees">Assignees (initials)</label>
+                <input type="text" id="at-assignees" placeholder="DN, JS, SL" maxlength="60">
+                <div class="form-hint">Comma-separated initials, e.g. DN, JS</div>
+            </div>
+
+            <div class="form-field">
+                <label>Predecessors (finish-to-start)</label>
+                <div class="form-hint" style="margin-bottom:0.45rem;">Tick tasks that must finish before this one. Lag = extra working days after the predecessor finishes.</div>
+                <div id="at-deps" class="gantt-edit-deps"></div>
+            </div>
+
+            <div class="add-task-actions">
+                <button class="btn-add-cancel" onclick="closeAddTaskModal()">Cancel</button>
+                <button class="btn-add-submit" onclick="submitAddTask()">Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout overlay -->
+    <div class="logout-overlay" id="logoutOverlay">
+        <div class="logout-modal">
+            <div class="logout-modal-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <h3>Sign Out?</h3>
+            <p>You'll be redirected to the login screen. Unsaved changes will be lost.</p>
+            <div class="logout-modal-actions">
+                <button class="btn-cancel-logout" onclick="hideLogoutModal()">Cancel</button>
+                <button class="btn-confirm-logout" onclick="confirmLogout()">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gantt task editor (wizard parity) -->
+    <div class="rp-gantt-modal-overlay" id="rpGanttTaskEditModal"
+         onclick="if(event.target===this)window.rpCloseGanttTaskEditModal()">
+        <div class="rp-gantt-modal-box" onclick="event.stopPropagation()">
+            <h3>Edit task</h3>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.5;">
+                Durations are <strong>working days</strong> (Mon–Fri). Saving re-runs CPM with dependency lag and crew pools, then writes the full schedule (including Kanban-added tasks) to the server.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:0.85rem;">
+                <div>
+                    <label class="rp-gantt-form-label" for="rpGanttEditName">Task name <span style="color:var(--accent-red)">*</span></label>
+                    <input class="rp-gantt-form-input" id="rpGanttEditName" maxlength="200" autocomplete="off">
+                </div>
+                <div>
+                    <label class="rp-gantt-form-label" for="rpGanttEditStart">Start date <span style="color:var(--accent-red)">*</span></label>
+                    <input class="rp-gantt-form-input" id="rpGanttEditStart" type="date" oninput="window.rpRefreshGanttEditEndPreview()">
+                </div>
+                <div>
+                    <label class="rp-gantt-form-label" for="rpGanttEditDuration">Duration (working days) <span style="color:var(--accent-red)">*</span></label>
+                    <input class="rp-gantt-form-input" id="rpGanttEditDuration" type="number" min="1" step="1" oninput="window.rpRefreshGanttEditEndPreview()">
+                </div>
+                <div>
+                    <label class="rp-gantt-form-label" for="rpGanttEditCost">Task cost</label>
+                    <input class="rp-gantt-form-input" id="rpGanttEditCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+                </div>
+                <div>
+                    <div class="rp-gantt-form-label" style="margin-bottom:0.35rem;">Inspection</div>
+                    <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.85rem;color:var(--text-main);cursor:pointer;margin-bottom:0.35rem;">
+                        <input type="checkbox" id="rpGanttEditInspectionNeeded" onchange="window.syncRpGanttInspectionFields()">
+                        <span>Inspection needed for this task</span>
+                    </label>
+                    <label class="rp-gantt-form-label" for="rpGanttEditInspectionDate" id="rpGanttEditInspectionDateLabel" style="opacity:0.5;">Inspection date</label>
+                    <input class="rp-gantt-form-input" id="rpGanttEditInspectionDate" type="date" disabled>
+                    <p style="font-size:0.72rem;color:var(--text-muted);margin:0.35rem 0 0 0;">Set a date only when inspection is required.</p>
+                </div>
+                <div>
+                    <div class="rp-gantt-form-label" style="margin-bottom:0.35rem;">Predecessors (finish-to-start)</div>
+                    <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.4rem 0;">Tick tasks that must finish before this one. Lag = extra working days after the predecessor finishes.</p>
+                    <div id="rpGanttEditDeps" class="gantt-edit-deps"></div>
+                </div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">
+                    Last working day: <strong id="rpGanttEditEndDisplay" style="color:var(--text-main);font-family:'JetBrains Mono',monospace;">—</strong>
+                </div>
+            </div>
+            <button type="button" class="btn-rp-gantt-delete" onclick="window.rpDeleteGanttTask()">Delete task</button>
+            <div class="rp-gantt-modal-actions">
+                <button type="button" class="btn-rp-gantt-cancel" onclick="window.rpCloseGanttTaskEditModal()">Cancel</button>
+                <button type="button" class="btn-rp-gantt-save" onclick="window.rpSaveGanttTaskEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/project_context.js"></script>
+    <script src="/static/js/gantt_cpm.js"></script>
+    <script src="/static/js/resource_plan.js"></script>
+
+</body>
+</html>

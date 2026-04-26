@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas AI &#8212; VR Training Hub</title>
+    <style>
+        :root {
+            --bg-body: #121212; --bg-card: #1E1E1E; --bg-hover: #2A2A2A;
+            --bg-panel: #252526; --text-main: #FFFFFF; --text-muted: #A0A0A0;
+            --accent-blue: #2196F3; --accent-green: #4CAF50;
+            --accent-orange: #FF9800; --accent-teal: #009688;
+            --accent-red: #E57373; --border: #333333; --nav-height: 70px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',-apple-system,sans-serif; background-color:var(--bg-body); color:var(--text-main); overflow-y:auto; overflow-x:hidden; }
+        nav { height:var(--nav-height); background-color:#18181B; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; padding:0 2rem; position:sticky; top:0; z-index:100; }
+        .nav-left { font-size:1.2rem; font-weight:700; letter-spacing:-0.5px; }
+        .nav-center { display:flex; gap:2rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:0.9rem; font-weight:500; transition:0.2s; position:relative; padding-bottom:2px; }
+        .nav-link:hover, .nav-link.active { color:var(--text-main); }
+        .nav-link.active::after { content:''; position:absolute; bottom:-24px; left:0; width:100%; height:2px; background:var(--accent-blue); }
+        .nav-right { display:flex; align-items:center; gap:1rem; }
+        .bell-wrap { position:relative; cursor:pointer; }
+        .icon-bell { width:20px; height:20px; stroke:var(--text-muted); }
+        .bell-badge { display:none; position:absolute; top:-4px; right:-4px; background:var(--accent-red); color:#fff; font-size:0.6rem; font-weight:700; width:14px; height:14px; border-radius:50%; align-items:center; justify-content:center; }
+        .bell-badge.visible { display:flex; }
+        .avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; border:2px solid var(--border); }
+        .avatar img { width:100%; height:100%; object-fit:cover; }
+        main { max-width:1400px; margin:0 auto; padding:2rem; display:flex; flex-direction:column; gap:3rem; }
+        h2.section-title { font-size:1.1rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:1rem; border-left:3px solid var(--accent-blue); padding-left:10px; }
+        #toast { position:fixed; bottom:1.5rem; right:1.5rem; background:#333; color:#fff; padding:0.75rem 1.25rem; border-radius:8px; font-size:0.85rem; opacity:0; transform:translateY(10px); transition:opacity 0.3s,transform 0.3s; z-index:999; pointer-events:none; max-width:320px; }
+        #toast.show { opacity:1; transform:translateY(0); }
+        #toast.info { border-left:4px solid var(--accent-blue); }
+        #toast.success { border-left:4px solid var(--accent-green); }
+        #toast.error { border-left:4px solid var(--accent-red); }
+        .vr-hub-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+        .vr-overall { font-size:0.85rem; color:var(--text-muted); }
+        .vr-overall span { font-weight:700; color:var(--accent-blue); }
+        .vr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.5rem; }
+        .course-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; transition:transform 0.2s,border-color 0.2s; cursor:pointer; }
+        .course-card:hover { transform:translateY(-5px); border-color:var(--text-muted); }
+        .course-thumbnail { height:180px; background:#252526; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:center; position:relative; }
+        .course-icon { width:64px; height:64px; opacity:0.8; fill:var(--text-main); }
+        .course-badge { position:absolute; top:12px; left:12px; background:rgba(0,0,0,0.6); color:#fff; padding:4px 8px; font-size:0.7rem; border-radius:4px; text-transform:uppercase; }
+        .course-badge.mandatory { background:rgba(229,115,115,0.8); }
+        .course-badge.core { background:rgba(33,150,243,0.8); }
+        .course-badge.elective { background:rgba(0,150,136,0.8); }
+        .course-content { padding:1.5rem; flex:1; display:flex; flex-direction:column; justify-content:space-between; }
+        .course-title { font-size:1.1rem; font-weight:600; margin-bottom:0.5rem; }
+        .course-meta { font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem; }
+        .progress-container { width:100%; }
+        .progress-header { display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:8px; }
+        .progress-track { width:100%; height:8px; background:#333; border-radius:4px; overflow:hidden; }
+        .progress-fill { height:100%; border-radius:4px; }
+        .fill-green { background:var(--accent-green); }
+        .fill-blue  { background:var(--accent-blue); }
+        .fill-grey  { background:#555; }
+    
+        /* User menu dropdown */
+        .user-menu-wrap{position:relative}
+        .user-menu-wrap .avatar{cursor:pointer;transition:border-color .2s,transform .2s}
+        .user-menu-wrap .avatar:hover{border-color:var(--accent-blue);transform:scale(1.05)}
+        .user-dropdown{display:none;position:absolute;top:calc(100% + 12px);right:0;background:#1C1C1E;border:1px solid #3A3A3A;border-radius:12px;min-width:210px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:500;overflow:hidden;animation:ddFade .15s ease}
+        @keyframes ddFade{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+        .user-dropdown.open{display:block}
+        .user-dropdown-header{padding:.85rem 1rem;display:flex;align-items:center;gap:.65rem}
+        .user-dropdown-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;border:2px solid #444;flex-shrink:0}
+        .user-dropdown-avatar img{width:100%;height:100%;object-fit:cover}
+        .user-dropdown-info{display:flex;flex-direction:column}
+        .user-dropdown-name{font-size:.85rem;font-weight:700;color:#fff;line-height:1.2}
+        .user-dropdown-role{font-size:.72rem;color:#888;margin-top:2px}
+        .user-dropdown-divider{height:1px;background:#2D2D2D}
+        .user-dropdown-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.85rem;color:#ccc;text-decoration:none;background:none;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+        .user-dropdown-item:hover{background:rgba(255,255,255,.06);color:#fff}
+        .user-dropdown-item svg{width:15px;height:15px;opacity:.7;flex-shrink:0}
+        .user-dropdown-item.logout-item{color:#E57373;margin-bottom:2px}
+        .user-dropdown-item.logout-item:hover{background:rgba(229,115,115,.1);color:#ef9a9a}
+        .logout-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .logout-overlay.open{display:flex}
+        .logout-modal{background:#1C1C1E;border:1px solid #3A3A3A;border-radius:16px;padding:2rem;width:340px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.7);animation:ddFade .2s ease}
+        .logout-modal-icon{width:48px;height:48px;background:rgba(229,115,115,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+        .logout-modal-icon svg{width:24px;height:24px;stroke:#E57373}
+        .logout-modal h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+        .logout-modal p{font-size:.875rem;color:#888;margin-bottom:1.5rem;line-height:1.5}
+        .logout-modal-actions{display:flex;gap:.75rem}
+        .logout-modal-actions button{flex:1;padding:.65rem;border-radius:8px;font-size:.875rem;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid transparent;transition:.2s}
+        .btn-cancel-logout{background:transparent;border-color:#444!important;color:#aaa}
+        .btn-cancel-logout:hover{border-color:#666!important;color:#fff}
+        .btn-confirm-logout{background:rgba(229,115,115,.15);border-color:rgba(229,115,115,.4)!important;color:#E57373}
+        .btn-confirm-logout:hover{background:rgba(229,115,115,.25);color:#ef9a9a}
+        </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">Veritas AI Construction Platform</div>
+        <div class="nav-center">
+            <a href="/dashboard" class="nav-link" id="navLinkHome">Home</a>
+            <a href="/new-project" class="nav-link" id="navLinkProjects">Projects</a>
+            <a href="/safety" class="nav-link" id="navLinkRecentAlerts">Recent Alerts</a>
+            <a href="/resource-plan" class="nav-link" id="navLinkResourcePlan">Resource Plan</a>
+            <a href="/vr-training" class="nav-link active" id="navLinkVrTraining">VR Training Status</a>
+            <a href="/resourciist" class="nav-link" id="navLinkResourciist">Resource List</a>
+        </div>
+        <div class="nav-right">
+            <div class="bell-wrap" id="bellBtn">
+                <svg class="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="bell-badge" id="bellBadge"></span>
+            </div>
+            <div class="user-menu-wrap" id="userMenuWrap">
+            <div class="avatar" id="avatarBtn" title="Account menu">
+                <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+            </div>
+            <!-- User dropdown -->
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-dropdown-header">
+                    <div class="user-dropdown-avatar">
+                        <img src="/static/assets/passportphotodominicnottage.jpg" alt="User">
+                    </div>
+                    <div class="user-dropdown-info">
+                        <span class="user-dropdown-name">D. Nottage</span>
+                        <span class="user-dropdown-role">Lead Instructor</span>
+                    </div>
+                </div>
+                <div class="user-dropdown-divider"></div>
+                <a href="/dashboard" class="user-dropdown-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    My Profile
+                </a>
+                <div class="user-dropdown-divider"></div>
+                <button class="user-dropdown-item logout-item" onclick="showLogoutModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </button>
+            </div>
+        </div>
+        </div>
+    </nav>
+    <div style="display:flex;justify-content:flex-start;align-items:center;padding:1.5rem 2rem 0;max-width:1400px;margin:0 auto;">
+        <div id="projectSwitcher" style="min-height:2rem;"></div>
+    </div>
+    <main>
+        <section>
+            <div class="vr-hub-header">
+                <h2 class="section-title" style="margin-bottom:0">VR Training Hub</h2>
+                <div class="vr-overall">
+                    Overall: <span id="vrOverallBadge">&#8212;</span> complete &nbsp;|&nbsp;
+                    <span id="vrCompletedBadge">0</span> modules passed
+                </div>
+            </div>
+
+            <div class="vr-grid" id="vrGrid">
+                <!-- Populated by vr_training.js via /api/vr/modules -->
+                <div class="course-card">
+                    <div class="course-thumbnail">
+                        <span class="course-badge core">Core Module</span>
+                        <svg class="course-icon" viewBox="0 0 24 24"><path d="M20,12V10H4V20H2V4H4V8H20V6H22V12H20M13,18H15V14H13V18M17,18H19V14H17V18M9,18H11V14H9V18Z"/></svg>
+                    </div>
+                    <div class="course-content">
+                        <div>
+                            <div class="course-title">Crane Operation Basics</div>
+                            <div class="course-meta">Completed &bull; 2h 15m</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-header">
+                                <span style="color:var(--accent-green)">Passed</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill fill-green" style="width:100%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="course-card">
+                    <div class="course-thumbnail">
+                        <span class="course-badge mandatory">Mandatory</span>
+                        <svg class="course-icon" viewBox="0 0 24 24"><path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8,8,0,0,1,12,20Zm0-12a4,4,0,1,0,4,4A4,4,0,0,0,12,8Z"/></svg>
+                    </div>
+                    <div class="course-content">
+                        <div>
+                            <div class="course-title">Site Safety Protocols</div>
+                            <div class="course-meta">In Progress &bull; Due Tomorrow</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-header">
+                                <span style="color:var(--accent-blue)">Resuming&hellip;</span>
+                                <span>85%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill fill-blue" style="width:85%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="course-card">
+                    <div class="course-thumbnail">
+                        <span class="course-badge elective">Elective</span>
+                        <svg class="course-icon" viewBox="0 0 24 24"><path d="M4,18V20H8V18H4M10,18V20H20V18H10M4,14V16H20V14H4M4,10V12H20V10H4M4,6V8H20V6H4Z"/></svg>
+                    </div>
+                    <div class="course-content">
+                        <div>
+                            <div class="course-title">Material Handling</div>
+                            <div class="course-meta">Not Started &bull; 45 mins</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-header">
+                                <span style="color:var(--text-muted)">Pending</span>
+                                <span>10%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill fill-grey" style="width:10%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast"></div>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/project_context.js"></script>
+    <script src="/static/js/vr_training.js"></script>
+</body>
+</html>
