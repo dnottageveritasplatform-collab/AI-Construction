@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.git
+.gitignore
+.env
+.env.*
+.cursor
+.pytest_cache
+.mypy_cache
+*.egg-info/
+dist/
+build/
+data/ifc_geometry_cache/
+# Keep static/uploads/ifc — the dashboard viewer needs matching PRJ-*_*.ifc files on disk.

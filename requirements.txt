@@ -1,0 +1,18 @@
+# Veritas AI Construction Platform – Python Dependencies
+# Install with:  pip install -r requirements.txt
+
+# Core web framework
+Flask>=3.0.0
+
+# Production WSGI (Render / Docker)
+gunicorn>=21.2.0
+
+# IFC upload & geometry (api/ifc_route.py)
+ifcopenshell>=0.7.0
+
+# Optional: Cross-origin resource sharing (app handles CORS natively without this)
+# Flask-CORS>=4.0.0
+
+# Optional: WebSocket support (app uses Server-Sent Events natively without this)
+# Flask-SocketIO>=5.3.0
+# eventlet>=0.35.0
