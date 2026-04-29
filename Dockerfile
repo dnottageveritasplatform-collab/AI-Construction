@@ -20,4 +20,5 @@ COPY . .
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 8 --timeout 120 --access-logfile - --error-logfile - app:app"]
+# gthread: SSE (/api/events) holds a connection open; sync worker would block all other requests (502s).
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --worker-class gthread --workers 1 --threads 8 --timeout 120 --access-logfile - --error-logfile - app:app"]
