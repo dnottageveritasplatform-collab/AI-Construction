@@ -58,21 +58,24 @@ class _ProjectStore:
     # ------------------------------------------------------------------ #
 
     def _ensure_loaded(self) -> None:
-        """Load from disk exactly once (lazy, thread-safe)."""
+        """Load from disk exactly once (lazy, thread-safe for gunicorn gthread)."""
         if self._loaded:
             return
-        if os.path.exists(self._filepath):
-            try:
-                with open(self._filepath, "r", encoding="utf-8") as fh:
-                    raw = json.load(fh)
-                self._drafts   = raw.get("drafts",   {})
-                self._projects = raw.get("projects", {})
-                self._migrate_schema()
-            except (json.JSONDecodeError, OSError):
-                # Corrupted or unreadable - start fresh; overwritten on next save.
-                self._drafts   = {}
-                self._projects = {}
-        self._loaded = True
+        with self._lock:
+            if self._loaded:
+                return
+            if os.path.exists(self._filepath):
+                try:
+                    with open(self._filepath, "r", encoding="utf-8") as fh:
+                        raw = json.load(fh)
+                    self._drafts   = raw.get("drafts",   {})
+                    self._projects = raw.get("projects", {})
+                    self._migrate_schema()
+                except (json.JSONDecodeError, OSError):
+                    # Corrupted or unreadable - start fresh; overwritten on next save.
+                    self._drafts   = {}
+                    self._projects = {}
+            self._loaded = True
 
     def _migrate_schema(self) -> None:
         """
