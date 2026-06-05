@@ -78,8 +78,34 @@ STATUS_MAP  = {"available": "Available", "in_use": "In Use", "low_stock": "Low S
 VALID_CATEGORIES = frozenset({"Personnel", "Heavy Machinery", "Materials"})
 
 
+def _team_personnel_assets(proj: dict) -> list:
+    """Map a project's assigned team members into Personnel asset rows."""
+    team = proj.get("team") or {}
+    members = team.get("members") or []
+    rows: list = []
+    if not isinstance(members, list):
+        return rows
+    for m in members:
+        if not isinstance(m, dict):
+            continue
+        mid = (m.get("id") or m.get("user_id") or "").strip()
+        name = (m.get("name") or "").strip()
+        if not mid or not name:
+            continue
+        role = (m.get("role") or "").strip()
+        rows.append({
+            "id":       mid,
+            "name":     name,
+            "category": "Personnel",
+            "status":   "in_use",
+            "location": role or "Project Team",
+            "notes":    f"Assigned to project{f' — {role}' if role else ''}",
+        })
+    return rows
+
+
 def _merged_project_assets_raw(project_id: str) -> list:
-    """Custom resources + catalogue subset for a store project; full ASSETS if no project."""
+    """Team personnel + custom resources + catalogue subset for a store project; full ASSETS if no project."""
     base = [dict(a) for a in ASSETS]
     pid = (project_id or "").strip()
     if not pid or pid not in STORE_PROJECTS:
@@ -88,6 +114,8 @@ def _merged_project_assets_raw(project_id: str) -> list:
     proj = STORE_PROJECTS[pid]
     details = proj.get("details") or {}
     pname = details.get("project_name", pid)
+
+    team_rows = _team_personnel_assets(proj)
 
     custom: list = []
     raw = proj.get("resources")
@@ -108,11 +136,16 @@ def _merged_project_assets_raw(project_id: str) -> list:
         row["notes"] = f"{pname}: {note}" if note else f"Assigned — {pname}"
         subset.append(row)
 
-    custom_ids = {c["id"] for c in custom}
-    merged = list(custom)
-    for row in subset:
-        if row["id"] not in custom_ids:
-            merged.append(row)
+    # Custom (user-defined) rows take precedence, then real team personnel,
+    # then the deterministic catalogue subset. Earlier rows win on id clashes.
+    seen_ids = set()
+    merged: list = []
+    for row in custom + team_rows + subset:
+        rid = row.get("id")
+        if rid in seen_ids:
+            continue
+        seen_ids.add(rid)
+        merged.append(row)
     return merged
 
 
