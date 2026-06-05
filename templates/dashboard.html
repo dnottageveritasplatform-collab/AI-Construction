@@ -149,9 +149,12 @@
         .doc-item { display:flex; align-items:center; gap:0.7rem; padding:0.55rem 0.6rem; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:background .15s,border-color .15s; }
         .doc-item:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.14); }
         .doc-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:700; color:#fff; flex-shrink:0; }
-        .doc-info { min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .doc-info { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
         .doc-name { font-size:0.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .doc-meta { font-size:0.72rem; color:var(--text-muted); }
+        .doc-delete-btn { flex-shrink:0; background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px 6px; border-radius:6px; line-height:1; display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; }
+        .doc-delete-btn:hover { color:#f06060; background:rgba(240,96,96,0.12); }
+        .doc-delete-btn svg { width:15px; height:15px; }
         .skeleton { background:linear-gradient(90deg,#2a2a2a 25%,#333 50%,#2a2a2a 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:4px; height:36px; margin-bottom:8px; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     
@@ -273,7 +276,7 @@
             <!-- IFC loading overlay -->
             <div id="bimLoadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(13,17,23,.88);flex-direction:column;align-items:center;justify-content:center;gap:.75rem;z-index:10">
                 <div id="bimSpinner" style="width:36px;height:36px;border:3px solid rgba(59,130,246,.2);border-top-color:#3b82f6;border-radius:50%;animation:bimSpin .9s linear infinite"></div>
-                <span id="bimLoadingText" style="font-size:.78rem;color:#6b7280;font-family:monospace">Loading IFC model…</span>
+                <span id="bimLoadingText" style="font-size:.78rem;color:#6b7280;font-family:monospace">Loading BIM model…</span>
             </div>
             <!-- No-IFC placeholder -->
             <div id="bimNoModel" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;color:#e5e7eb;background:rgba(13,17,23,.94);z-index:7">
@@ -283,11 +286,11 @@
                     <path d="M3 17l4.5-3.5 3.2 2.6L14.5 11 21 17.2"/>
                 </svg>
                 <span style="font-size:.95rem;font-weight:600;color:#f3f4f6">No image available</span>
-                <span style="font-size:.76rem;color:#9ca3af;max-width:18rem;text-align:center">There is no IFC file to render for this project.</span>
+                <span style="font-size:.76rem;color:#9ca3af;max-width:18rem;text-align:center">There is no IFC, DWG, or DXF model to render for this project.</span>
             </div>
             <div id="bimPhaseEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:.35rem;background:rgba(13,17,23,.94);z-index:8;text-align:center;padding:1rem">
                 <span style="font-size:.95rem;font-weight:600;color:#f3f4f6">No Mesh Available</span>
-                <span style="font-size:.76rem;color:#9ca3af;max-width:16rem">No geometry in this IFC is tagged for the selected phase.</span>
+                <span style="font-size:.76rem;color:#9ca3af;max-width:16rem">No geometry for this construction stage. Re-upload the IFC or try All Days.</span>
             </div>
             <div class="phase-tag" id="modelPhaseTag">Loading BIM…</div>
             <div class="bim-legend" id="bimLegend"></div>
@@ -512,6 +515,11 @@
 
         /* Render loop */
         let modelGroup = null;
+        let bimViewerMode = "3d";
+        let lineRoot = null;
+        let _fullModelLayout = null;
+        /** In-memory BIM cache: avoid re-fetching/re-parsing the same IFC on phase changes. */
+        let _bimGeoCache = { projectId: null, master: null, stages: {}, stagePhases: [] };
         const clock = new THREE.Clock();
         (function loop() {
             requestAnimationFrame(loop);
@@ -519,11 +527,110 @@
             renderer.render(scene, camera);
         })();
 
-        /* ── Server-side IFC geometry loader (no browser WASM needed) ── */
+        /* ── Server-side BIM geometry (meshes + optional 2D linework) ── */
         function buildFromGeometry(geoData) {
             if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
-            // Outer = world yaw; inner = IFC Z-up → Y-up (avoids Euler order skew).
+            lineRoot = null;
+            bimViewerMode = geoData.bim_mode
+                || ((geoData.lines && geoData.lines.length && !(geoData.meshes && geoData.meshes.length)) ? "2d" : "3d");
+
             modelGroup = new THREE.Group();
+            scene.add(modelGroup);
+
+            const hasMeshes = geoData.meshes && geoData.meshes.length > 0;
+            const hasLines  = geoData.lines && geoData.lines.length > 0;
+            const wireframeOnly = !!(geoData.cad_wireframe_only || geoData.status === "cad_wireframe_only");
+
+            let lineCx = 0, lineCy = 0, lineCz = 0, lineMaxSz = 0;
+            if (hasLines) {
+                let minX = Infinity, minY = Infinity, minZ = Infinity;
+                let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+                (geoData.lines || []).forEach(batch => {
+                    const pos = batch.positions || [];
+                    for (let i = 0; i < pos.length; i += 3) {
+                        const x = pos[i], y = pos[i + 1], z = pos[i + 2];
+                        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+                        if (x < minX) minX = x; if (x > maxX) maxX = x;
+                        if (y < minY) minY = y; if (y > maxY) maxY = y;
+                        if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+                    }
+                });
+                lineCx = (Number.isFinite(minX) && Number.isFinite(maxX)) ? (minX + maxX) / 2 : 0;
+                lineCy = (Number.isFinite(minY) && Number.isFinite(maxY)) ? (minY + maxY) / 2 : 0;
+                lineCz = (Number.isFinite(minZ) && Number.isFinite(maxZ)) ? (minZ + maxZ) / 2 : 0;
+                const szX = (Number.isFinite(minX) && Number.isFinite(maxX)) ? (maxX - minX) : 0;
+                const szY = (Number.isFinite(minY) && Number.isFinite(maxY)) ? (maxY - minY) : 0;
+                const szZ = (Number.isFinite(minZ) && Number.isFinite(maxZ)) ? (maxZ - minZ) : 0;
+                lineMaxSz = Math.max(szX, szY, szZ);
+            }
+
+            if (hasLines) {
+                lineRoot = new THREE.Group();
+                lineRoot.name = "lineRoot";
+                (geoData.lines || []).forEach(batch => {
+                    const raw = batch.positions || [];
+                    if (raw.length < 6) return;
+                    const pos = new Float32Array(raw.length);
+                    for (let i = 0; i < raw.length; i += 3) {
+                        pos[i]     = raw[i]     - lineCx;
+                        pos[i + 1] = raw[i + 1] - lineCy;
+                        pos[i + 2] = raw[i + 2] - lineCz;
+                    }
+                    const g = new THREE.BufferGeometry();
+                    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+                    const c = batch.color || [0.55, 0.58, 0.62, 1.0];
+                    const mat = new THREE.LineBasicMaterial({
+                        color: new THREE.Color(c[0], c[1], c[2]),
+                        transparent: c[3] < 0.99,
+                        opacity: (c[3] < 0.05) ? 1.0 : c[3],
+                    });
+                    const seg = new THREE.LineSegments(g, mat);
+                    seg.userData.bimPhase = batch.phase || "structure";
+                    seg.userData.bimLayer = batch.layer || "";
+                    lineRoot.add(seg);
+                });
+                modelGroup.add(lineRoot);
+                console.log("[BIMViewer] 2D line batches =", lineRoot.children.length);
+            }
+
+            if (!hasMeshes) {
+                if (lineRoot) {
+                    if (wireframeOnly && lineMaxSz > 0) {
+                        const halfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+                        camRadius = Math.max(4, (lineMaxSz * 0.5 / Math.tan(halfFov)) * 1.35);
+                        camTheta = -0.55;
+                        camPhi = 0.42;
+                        if (scene.fog) {
+                            scene.fog.near = Math.min(100, camRadius * 0.15);
+                            scene.fog.far  = Math.max(500, camRadius * 3.0);
+                        }
+                        camera.far = Math.max(camera.far || 500, camRadius * 6.0);
+                        camera.updateProjectionMatrix();
+                        modelGroup.updateMatrixWorld(true);
+                        let wbox = new THREE.Box3().setFromObject(lineRoot);
+                        const wcenter = new THREE.Vector3();
+                        wbox.getCenter(wcenter);
+                        modelGroup.position.x -= wcenter.x;
+                        modelGroup.position.z -= wcenter.z;
+                        modelGroup.updateMatrixWorld(true);
+                        wbox = new THREE.Box3().setFromObject(lineRoot);
+                        modelGroup.position.y -= wbox.min.y;
+                        modelGroup.updateMatrixWorld(true);
+                        wbox = new THREE.Box3().setFromObject(lineRoot);
+                        const bH = wbox.max.y - wbox.min.y;
+                        camTargetY = Number.isFinite(bH) && bH > 0 ? bH * 0.42 : 0;
+                        posCamera();
+                        autoRot = false;
+                    } else if (bimViewerMode === "2d") {
+                        framePlanView(lineRoot);
+                    }
+                }
+                const tf = document.getElementById("timeFilter");
+                setPhaseFilter(tf ? tf.value : "all");
+                return;
+            }
+
+            // Outer = world yaw; inner = IFC Z-up → Y-up (avoids Euler order skew).
             const ifcRoot = new THREE.Group();
             modelGroup.add(ifcRoot);
             const t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -614,12 +721,16 @@
             } else {
                 camRadius = 30;
             }
-            // IFC exports are often Z-up; convert to Three.js Y-up (inner group).
-            ifcRoot.rotation.x = -Math.PI / 2;
-            // Small roll correction — some exports read as slightly “leaning” vs world Y.
-            ifcRoot.rotation.z = -0.13;
-            // World yaw on outer group: clockwise from above ≈ negative Y.
-            modelGroup.rotation.y = -Math.PI / 4;
+            const cadSource = (geoData.bim_format === "cad" || geoData.source_format === "dwg" || geoData.source_format === "dxf");
+            const cadPlan = cadSource && (bimViewerMode === "2d" || bimViewerMode === "mixed");
+            if (!cadPlan) {
+                // IFC exports are often Z-up; convert to Three.js Y-up (inner group).
+                ifcRoot.rotation.x = -Math.PI / 2;
+                ifcRoot.rotation.z = 0;
+                modelGroup.rotation.y = -Math.PI / 4;
+            } else if (bimViewerMode === "2d") {
+                modelGroup.rotation.y = 0;
+            }
 
             // Set a stable default view angle after load. Keep elevation moderate
             // so the model doesn't start too "top-down" on load.
@@ -648,7 +759,6 @@
                         "boxSize =", { x: szX, y: szY, z: szZ },
                         "camRadius =", camRadius);
             autoRot = false;
-            scene.add(modelGroup);
 
             // Center the model in the BIM card: align world AABB (XZ + ground), aim camera at mid-height,
             // and nudge slightly along -Z so framing sits more in the middle of the viewport.
@@ -670,6 +780,13 @@
             }
             modelGroup.updateMatrixWorld(true);
             posCamera();
+            _fullModelLayout = {
+                position: modelGroup.position.clone(),
+                camTargetY,
+                camRadius,
+                camTheta,
+                camPhi,
+            };
 
             // Expand ground so large IFC models align with a level “pad” (reduces odd horizon cues).
             if (Number.isFinite(maxSz) && maxSz > 0) {
@@ -681,87 +798,294 @@
                 }
             }
 
+            if (bimViewerMode === "mixed" && lineRoot) {
+                lineRoot.position.copy(modelGroup.position);
+            }
+
             const tf = document.getElementById("timeFilter");
             setPhaseFilter(tf ? tf.value : "all");
         }
 
+        function framePlanView(root) {
+            root.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(root);
+            const center = new THREE.Vector3();
+            const size = new THREE.Vector3();
+            box.getCenter(center);
+            box.getSize(size);
+            const span = Math.max(size.x, size.z, 1);
+            camTargetY = center.y;
+            camTheta = 0;
+            camPhi = 0.08;
+            camRadius = Math.max(span * 0.65, 4);
+            if (scene.fog) {
+                scene.fog.near = span * 0.05;
+                scene.fog.far  = Math.max(span * 8, 500);
+            }
+            camera.far = Math.max(span * 12, 500);
+            camera.updateProjectionMatrix();
+            root.position.x -= center.x;
+            root.position.z -= center.z;
+            root.updateMatrixWorld(true);
+            posCamera();
+            gnd.visible = true;
+            const pad = Math.max(200, span * 2);
+            if (gnd.geometry) {
+                gnd.geometry.dispose();
+                gnd.geometry = new THREE.PlaneGeometry(pad, pad);
+            }
+        }
+
         const _BIM_PHASE_KEYS = new Set(["foundation", "structure", "mep", "cladding", "finishing"]);
+
+        /** Re-center and ground only visible geometry (fixes odd framing when a single stage is selected). */
+        function _reframeVisibleBim() {
+            if (!modelGroup || !_fullModelLayout) return;
+            modelGroup.position.copy(_fullModelLayout.position);
+            modelGroup.updateMatrixWorld(true);
+            const box = new THREE.Box3();
+            const roots = [];
+            const ifcRoot = modelGroup.children.find(ch => ch.type === "Group" && ch !== lineRoot);
+            if (ifcRoot) roots.push(ifcRoot);
+            if (lineRoot) roots.push(lineRoot);
+            roots.forEach(root => {
+                root.children.forEach(ch => {
+                    if (!ch.visible || (!ch.isMesh && !ch.isLineSegments)) return;
+                    box.expandByObject(ch);
+                });
+            });
+            if (box.isEmpty()) return;
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            modelGroup.position.x -= center.x;
+            modelGroup.position.z -= center.z;
+            modelGroup.updateMatrixWorld(true);
+            box.setFromObject(modelGroup);
+            modelGroup.position.y -= box.min.y;
+            modelGroup.updateMatrixWorld(true);
+            box.setFromObject(modelGroup);
+            const bH = box.max.y - box.min.y;
+            const bSpan = Math.max(box.max.x - box.min.x, box.max.z - box.min.z, 1);
+            camTargetY = Number.isFinite(bH) && bH > 0 ? bH * 0.42 : _fullModelLayout.camTargetY;
+            const halfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+            camRadius = Math.max(4, (Math.max(bSpan, bH) * 0.5 / Math.tan(halfFov)) * 1.35);
+            camTheta = _fullModelLayout.camTheta;
+            camPhi = _fullModelLayout.camPhi;
+            posCamera();
+        }
+
+        function _meshVisibleForPhase(meshPhase, phaseKey) {
+            return (meshPhase || "structure") === phaseKey;
+        }
 
         function _meshCountByPhase(ifcRoot, phaseKey) {
             let n = 0;
             ifcRoot.children.forEach(ch => {
                 if (!ch.isMesh || ch.userData.isExtrapolation) return;
                 const ph = ch.userData.bimPhase || "structure";
-                if (ph === phaseKey) n++;
+                if (_meshVisibleForPhase(ph, phaseKey)) n++;
             });
             return n;
         }
 
-        /**
-         * All Days → every mesh. Any other known phase → only meshes with that exact `phase` from the IFC.
-         * If that phase has no meshes → hide the model and show “No Mesh Available” (no placeholder geometry).
-         */
+        /** All Days → every mesh. Other phases → only meshes tagged for that construction stage. */
+        function _lineCountByPhase(phaseKey) {
+            if (!lineRoot) return 0;
+            let n = 0;
+            lineRoot.children.forEach(ch => {
+                if (!ch.isLineSegments) return;
+                const ph = ch.userData.bimPhase || "structure";
+                if (_meshVisibleForPhase(ph, phaseKey)) n++;
+            });
+            return n;
+        }
+
         function setPhaseFilter(phaseKey) {
             if (phaseEmpty) phaseEmpty.classList.remove("active");
-            const ifcRoot = modelGroup && modelGroup.children[0];
-            if (!ifcRoot) return;
+            const ifcRoot = modelGroup && modelGroup.children.find(ch => ch.type === "Group" && ch !== lineRoot);
+            const showAll = !phaseKey || phaseKey === "all" || !_BIM_PHASE_KEYS.has(phaseKey);
 
-            if (!phaseKey || phaseKey === "all" || !_BIM_PHASE_KEYS.has(phaseKey)) {
-                ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = true; });
+            if (showAll) {
+                if (ifcRoot) ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = true; });
+                if (lineRoot) lineRoot.children.forEach(obj => { if (obj.isLineSegments) obj.visible = true; });
                 if (modelGroup) modelGroup.visible = true;
                 gnd.visible = true;
+                if (_fullModelLayout) {
+                    modelGroup.position.copy(_fullModelLayout.position);
+                    camTargetY = _fullModelLayout.camTargetY;
+                    camRadius = _fullModelLayout.camRadius;
+                    camTheta = _fullModelLayout.camTheta;
+                    camPhi = _fullModelLayout.camPhi;
+                    posCamera();
+                }
                 return;
             }
 
-            const n = _meshCountByPhase(ifcRoot, phaseKey);
+            let n = 0;
+            if (ifcRoot) n += _meshCountByPhase(ifcRoot, phaseKey);
+            if (lineRoot) n += _lineCountByPhase(phaseKey);
+
             if (n === 0) {
-                ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = false; });
+                if (ifcRoot) ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = false; });
+                if (lineRoot) lineRoot.children.forEach(obj => { if (obj.isLineSegments) obj.visible = false; });
                 if (modelGroup) modelGroup.visible = false;
                 gnd.visible = false;
                 if (phaseEmpty) phaseEmpty.classList.add("active");
                 return;
             }
 
-            ifcRoot.children.forEach(obj => {
-                if (!obj.isMesh) return;
-                const p = obj.userData.bimPhase || "structure";
-                obj.visible = p === phaseKey;
-            });
+            if (ifcRoot) {
+                ifcRoot.children.forEach(obj => {
+                    if (!obj.isMesh) return;
+                    obj.visible = _meshVisibleForPhase(obj.userData.bimPhase || "structure", phaseKey);
+                });
+            }
+            if (lineRoot) {
+                lineRoot.children.forEach(obj => {
+                    if (!obj.isLineSegments) return;
+                    obj.visible = _meshVisibleForPhase(obj.userData.bimPhase || "structure", phaseKey);
+                });
+            }
             if (modelGroup) modelGroup.visible = true;
             gnd.visible = true;
+            if (phaseKey && phaseKey !== "all") _reframeVisibleBim();
         }
 
-        async function loadIFC(fileUrl, projectId) {
+        const _STAGE_LABELS = {
+            foundation: "Foundation",
+            structure: "Structural Frame",
+            mep: "MEP Systems",
+            cladding: "Cladding & Façade",
+            finishing: "Interior Finishing",
+        };
+
+        async function _ensureBimStageList(pid) {
+            if (_bimGeoCache.projectId === pid && _bimGeoCache.stagePhases.length) return;
+            if (_bimGeoCache.projectId !== pid) {
+                _bimGeoCache = { projectId: pid, master: null, stages: {}, stagePhases: [] };
+            }
+            try {
+                const sr = await fetch("/api/project/" + encodeURIComponent(pid) + "/bim-stages");
+                if (sr.ok) {
+                    const sj = await sr.json();
+                    _bimGeoCache.stagePhases = sj.stage_ifc_phases || [];
+                }
+            } catch (e) {
+                console.warn("[BIMViewer] bim-stages lookup failed", e);
+            }
+        }
+
+        function _applyCachedBimView(geoData, phase) {
+            buildFromGeometry(geoData);
+            const tf = document.getElementById("timeFilter");
+            if (geoData.dedicated_stage_ifc && phase) {
+                const ifcRoot = modelGroup && modelGroup.children.find(ch => ch.type === "Group" && ch !== lineRoot);
+                if (ifcRoot) ifcRoot.children.forEach(obj => { if (obj.isMesh) obj.visible = true; });
+                if (lineRoot) lineRoot.children.forEach(obj => { if (obj.isLineSegments) obj.visible = true; });
+                if (phaseTag) phaseTag.textContent = (_STAGE_LABELS[phase] || phase) + " — stage IFC";
+            } else {
+                setPhaseFilter(phase || (tf ? tf.value : "all") || "all");
+                if (phaseTag) {
+                    if (phase && geoData.phase_source !== "dedicated_ifc") {
+                        phaseTag.textContent = (_STAGE_LABELS[phase] || phase) + " — estimated split";
+                    } else {
+                        phaseTag.textContent = "BIM Model Loaded";
+                    }
+                }
+            }
+        }
+
+        async function loadBimModel(fileUrl, projectId, phaseFilter) {
             if (overlay) overlay.classList.add("active");
             if (noModel) noModel.classList.remove("active");
             if (phaseEmpty) phaseEmpty.classList.remove("active");
             if (phaseTag) phaseTag.textContent = "Loading model…";
-            if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
             const txtEl = document.getElementById("bimLoadingText");
             const pid = projectId || new URLSearchParams(window.location.search).get("project") || "";
+            const phase = (phaseFilter && phaseFilter !== "all") ? phaseFilter : "";
             try {
                 if (!pid) throw new Error("No project ID");
 
-                console.log("[IFCViewer] loadIFC pid =", pid);
-                if (txtEl) txtEl.textContent = "Requesting geometry from server…";
+                await _ensureBimStageList(pid);
 
-                const resp = await fetch("/api/project/" + encodeURIComponent(pid) + "/ifc-geometry");
-                console.log("[IFCViewer] geometry fetch resp status =", resp.status, "ok =", resp.ok);
-                const geoData = await resp.json();
-                if (!resp.ok) {
-                    const status = geoData && geoData.status ? geoData.status : ("HTTP " + resp.status);
-                    throw new Error(status);
+                const hasDedicated = phase && _bimGeoCache.stagePhases.includes(phase);
+
+                // Fast path: coordination IFC already in memory — only toggle visibility.
+                if (!hasDedicated && _bimGeoCache.master) {
+                    console.log("[BIMViewer] cache hit (master) phase =", phase || "all");
+                    _applyCachedBimView(_bimGeoCache.master, phase);
+                    if (overlay) overlay.classList.remove("active");
+                    return;
                 }
-                if (!geoData.meshes || geoData.meshes.length === 0) throw new Error(geoData.status || "Server returned 0 meshes");
-                console.log("[IFCViewer] geometry meshCount =", geoData.meshes.length, "status =", geoData.status);
-                if (txtEl) txtEl.textContent = "Rendering " + geoData.meshes.length + " meshes…";
-                buildFromGeometry(geoData);
+
+                // Fast path: dedicated stage IFC already fetched for this session.
+                if (hasDedicated && _bimGeoCache.stages[phase]) {
+                    console.log("[BIMViewer] cache hit (stage) phase =", phase);
+                    if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
+                    _fullModelLayout = null;
+                    _applyCachedBimView(_bimGeoCache.stages[phase], phase);
+                    if (overlay) overlay.classList.remove("active");
+                    return;
+                }
+
+                if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
+                _fullModelLayout = null;
+
+                console.log("[BIMViewer] load project =", pid, "phase =", phase || "all");
+                if (txtEl) txtEl.textContent = phase
+                    ? ("Loading " + (_STAGE_LABELS[phase] || phase) + " IFC…")
+                    : "Requesting BIM geometry from server…";
+
+                const q = phase ? ("?phase=" + encodeURIComponent(phase)) : "";
+                const geoUrl = "/api/project/" + encodeURIComponent(pid) + "/bim-geometry" + q;
+                // The server parses heavy models in a background thread and replies
+                // HTTP 202 {status:"parsing"} until the geometry is cached. Poll
+                // until it's ready so the request never hangs for minutes.
+                let geoData = null;
+                const pollStart = Date.now();
+                const POLL_TIMEOUT_MS = 30 * 60 * 1000;
+                while (true) {
+                    const resp = await fetch(geoUrl);
+                    const stillParsing = resp.status === 202;
+                    if (!stillParsing) {
+                        console.log("[BIMViewer] geometry fetch status =", resp.status, "ok =", resp.ok);
+                        geoData = await resp.json();
+                        if (!resp.ok) {
+                            const detail = (geoData && (geoData.error || geoData.message)) || "";
+                            const status = (geoData && geoData.status) ? geoData.status : ("HTTP " + resp.status);
+                            throw new Error(detail ? (status + ": " + detail) : status);
+                        }
+                        if (!geoData || geoData.status !== "parsing") break;
+                    }
+                    const secs = Math.round((Date.now() - pollStart) / 1000);
+                    const prepMsg = "Preparing model on server (first load can take a few minutes)… " + secs + "s";
+                    if (txtEl) txtEl.textContent = prepMsg;
+                    if (phaseTag) phaseTag.textContent = "Preparing model… " + secs + "s";
+                    if (Date.now() - pollStart > POLL_TIMEOUT_MS) throw new Error("Timed out preparing model");
+                    await new Promise(r => setTimeout(r, 3000));
+                }
+                const meshN = (geoData.meshes && geoData.meshes.length) || 0;
+                const lineN = (geoData.lines && geoData.lines.length) || 0;
+                if (meshN === 0 && lineN === 0) throw new Error(geoData.status || "Server returned no geometry");
+                const fmt = geoData.bim_format || geoData.source_format || "bim";
+                const mode = geoData.bim_mode || (lineN && !meshN ? "2d" : "3d");
+                console.log("[BIMViewer] format =", fmt, "mode =", mode, "meshes =", meshN, "lineBatches =", lineN);
+                if (txtEl) {
+                    txtEl.textContent = mode === "2d"
+                        ? ("Rendering " + lineN + " line layer(s)…")
+                        : ("Rendering " + meshN + " mesh(es)…");
+                }
+                if (geoData.dedicated_stage_ifc && phase) {
+                    _bimGeoCache.stages[phase] = geoData;
+                } else {
+                    _bimGeoCache.master = geoData;
+                }
+                _applyCachedBimView(geoData, phase);
                 if (overlay) overlay.classList.remove("active");
                 if (noModel) noModel.classList.remove("active");
-                if (phaseTag) phaseTag.textContent = "IFC Model Loaded";
             } catch(err) {
                 // Show the REAL error in the phase tag so it's visible on screen
-                console.error("[IFCViewer]", err.message);
+                console.error("[BIMViewer]", err.message);
                 if (overlay) overlay.classList.remove("active");
                 if (phaseEmpty) phaseEmpty.classList.remove("active");
                 if (noModel) noModel.classList.add("active");
@@ -773,8 +1097,14 @@
                         phaseTag.textContent = "⚠ IFC storage not available";
                     } else if (msg.includes("ifcopenshell_missing")) {
                         phaseTag.textContent = "⚠ IFC engine not installed on server";
+                    } else if (msg.includes("cad_3d_solids_unsupported") || msg.includes("3D solid object")) {
+                        phaseTag.textContent = "⚠ 3D solids in file — export as IFC or faceted DXF";
+                    } else if (msg.includes("cad_no_3d_geometry") || msg.includes("No 3D geometry")) {
+                        phaseTag.textContent = "⚠ No geometry in file — try another DWG/DXF";
+                    } else if (msg.includes("cad_parse_failed") || msg.includes("DWG conversion") || msg.includes("Native DWG")) {
+                        phaseTag.textContent = "⚠ DWG failed — restart CMD after setting ODAFC_EXE, or use DXF";
                     } else if (msg.includes("parse_failed")) {
-                        phaseTag.textContent = "⚠ IFC parse failed";
+                        phaseTag.textContent = "⚠ BIM parse failed";
                     } else {
                         phaseTag.textContent = "⚠ " + msg;
                     }
@@ -798,7 +1128,8 @@
         // ACTIVE_PROJECT_ID (URL + localStorage + first project). Auto-loading from
         // ?project= here only missed that path and required a full refresh.
 
-        return { loadIFC, showNoModel, buildFromGeometry, setPhaseFilter };
+        const loadIFC = loadBimModel;
+        return { loadIFC, loadBimModel, showNoModel, buildFromGeometry, setPhaseFilter };
     })();
     </script>
 </body>

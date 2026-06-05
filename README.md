@@ -152,6 +152,19 @@ Place the following files inside `static/assets/`:
 
 ---
 
+### BIM: optional IFC per construction stage
+
+In the New Project wizard (Step 8 — Documents) you can upload:
+
+1. **Coordination IFC** (general drop zone) — full building for **All Days** in the dashboard.
+2. **One IFC per stage** (Foundation, Structural Frame, MEP, Cladding, Interior Finishing) — used when that phase is selected in the dashboard viewer.
+
+When a stage-specific file exists, the dashboard loads that file instead of auto-splitting a single IFC by height. Export each phase from Revit/Archicad as its own IFC for best results.
+
+API: `GET /api/project/<project_id>/bim-geometry?phase=foundation` (and `GET .../bim-stages` to list uploaded stages).
+
+---
+
 ### Step 6 — Run the application
 
 ```bash

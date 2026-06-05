@@ -1,6 +1,6 @@
 """
-api/ifc_route.py  —  IFC upload + server-side geometry extraction
-Requires:  pip install ifcopenshell
+api/ifc_route.py  —  BIM upload (IFC + DWG/DXF) + server-side geometry extraction
+Requires:  pip install ifcopenshell  (IFC), ezdxf  (DWG/DXF — see docs/CAD_SETUP.md)
 
 Env:
   IFC_GEOMETRY_CACHE=0  — disable disk JSON cache for GET /ifc-geometry (default on).
@@ -9,10 +9,16 @@ Env:
   Smoke test: GET /api/admin/ifc/cache-smoke?project_id=PRJ-... (localhost; optional IFC_RELINK_TOKEN).
 """
 import gzip
-import os, glob, logging, math, shutil, json, hashlib, tempfile, time
+import os, glob, logging, math, shutil, json, hashlib, tempfile, time, uuid, threading
 from datetime import datetime
 from flask import Blueprint, request, jsonify, Response
-from data.project_store import PROJECTS as STORE_PROJECTS, store
+from data.project_store import DRAFTS, PROJECTS as STORE_PROJECTS, store
+from api.cad_geometry import (
+    CAD_DIR,
+    find_cad_for_project,
+    parse_cad_to_geometry,
+    save_cad_upload,
+)
 
 ifc_bp = Blueprint("ifc", __name__)
 logger = logging.getLogger(__name__)
@@ -33,10 +39,16 @@ def _ifc_geometry_cache_enabled() -> bool:
     return v not in ("0", "false", "no", "off")
 
 
+# Background parse jobs so the browser never blocks on a long first parse.
+# Maps absolute ifc/cad path -> "running" | "error". Guarded by _PARSE_LOCK.
+_PARSE_JOBS: dict[str, str] = {}
+_PARSE_LOCK = threading.Lock()
+
+
 def _geometry_cache_path(ifc_path: str) -> str:
     st = os.stat(ifc_path)
     mtime_ns = getattr(st, "st_mtime_ns", int(st.st_mtime * 1_000_000_000))
-    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}".encode()
+    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v8".encode()
     h = hashlib.sha256(key).hexdigest()[:32]
     return os.path.join(GEOMETRY_CACHE_DIR, f"{h}.json")
 
@@ -121,37 +133,136 @@ def _json_response_maybe_gzip(body: bytes) -> Response:
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _find_ifc_for_project(project_id: str) -> str | None:
-    """
-    Return the path of the IFC file associated with project_id, or None.
+BIM_STAGE_PHASES = frozenset(
+    {"foundation", "structure", "mep", "cladding", "finishing"}
+)
 
-    Optimised for fast lookup:
-    - Fail fast when project_id is empty.
-    - Only ever looks for files matching <project_id>_*.ifc.
-    - Avoids scanning all *.ifc files, which was slowing down flows that
-      don't actually use IFC (e.g. new project creation).
-    """
+
+def _project_documents(project_id: str) -> list[dict]:
+    proj = STORE_PROJECTS.get(project_id) or {}
+    return list(proj.get("documents") or [])
+
+
+def _draft_documents(draft_id: str) -> list[dict]:
+    draft = DRAFTS.get(draft_id) or {}
+    return list(draft.get("documents") or [])
+
+
+def _documents_for_prefix(prefix_id: str) -> list[dict]:
+    if prefix_id in STORE_PROJECTS:
+        return _project_documents(prefix_id)
+    if prefix_id in DRAFTS:
+        return _draft_documents(prefix_id)
+    return []
+
+
+def _normalize_bim_phase(value: str | None) -> str | None:
+    p = (value or "").strip().lower()
+    if not p or p in ("all", "master", "coordination", "full"):
+        return None
+    if p in BIM_STAGE_PHASES:
+        return p
+    return None
+
+
+def _ifc_path_for_doc(prefix_id: str, doc_id: str) -> str | None:
+    if not prefix_id or not doc_id:
+        return None
+    direct = os.path.join(IFC_DIR, f"{prefix_id}_{doc_id}.ifc")
+    if os.path.isfile(direct):
+        return direct
+    hits = glob.glob(os.path.join(IFC_DIR, f"*_{doc_id}.ifc"))
+    if not hits:
+        return None
+    chosen = max(hits, key=os.path.getmtime)
+    try:
+        base = os.path.basename(chosen)
+        if not base.startswith(prefix_id + "_"):
+            suffix = base.split("_", 1)[1] if "_" in base else base
+            healed = os.path.join(IFC_DIR, f"{prefix_id}_{suffix}")
+            if chosen != healed and not os.path.exists(healed):
+                os.replace(chosen, healed)
+                chosen = healed
+    except Exception:
+        pass
+    return chosen
+
+
+def _doc_bim_phase(doc: dict) -> str | None:
+    return _normalize_bim_phase(doc.get("bim_phase"))
+
+
+def _is_ifc_document(doc: dict) -> bool:
+    if (doc.get("type") or "").upper() == "IFC":
+        return True
+    name = (doc.get("name") or "").lower()
+    return name.endswith(".ifc")
+
+
+def _find_ifc_for_project_phase(project_id: str, phase: str) -> str | None:
+    """IFC path for a construction stage (dedicated per-stage upload)."""
+    phase = _normalize_bim_phase(phase)
+    if not project_id or not phase:
+        return None
+    for doc in _documents_for_prefix(project_id):
+        if not _is_ifc_document(doc):
+            continue
+        if _doc_bim_phase(doc) != phase:
+            continue
+        path = _ifc_path_for_doc(project_id, str(doc.get("doc_id", "")).strip())
+        if path:
+            return path
+    return None
+
+
+def _find_master_ifc_for_project(project_id: str) -> str | None:
+    """Coordination IFC (not tied to a single construction stage)."""
     if not project_id:
         return None
 
-    pattern = os.path.join(IFC_DIR, f"{project_id}_*.ifc")
-    hits = glob.glob(pattern)
-    if hits:
-        return max(hits, key=os.path.getmtime)
+    docs = _documents_for_prefix(project_id)
+    master_paths: list[str] = []
+    for doc in docs:
+        if not _is_ifc_document(doc):
+            continue
+        if _doc_bim_phase(doc) is not None:
+            continue
+        doc_id = str(doc.get("doc_id", "")).strip()
+        if not doc_id:
+            continue
+        path = _ifc_path_for_doc(project_id, doc_id)
+        if path:
+            master_paths.append(path)
 
-    # Fallback: if publish-time rename missed, recover by matching document IDs
-    # in this project store entry against any "*_<DOC-ID>.ifc" upload.
-    project = STORE_PROJECTS.get(project_id) or {}
-    doc_ids = [str(d.get("doc_id", "")).strip() for d in (project.get("documents") or [])]
-    doc_ids = [d for d in doc_ids if d]
-    candidates = []
-    for doc_id in doc_ids:
-        candidates.extend(glob.glob(os.path.join(IFC_DIR, f"*_{doc_id}.ifc")))
+    if master_paths:
+        return max(master_paths, key=os.path.getmtime)
+
+    stage_doc_ids = {
+        str(d.get("doc_id", "")).strip()
+        for d in docs
+        if _is_ifc_document(d) and _doc_bim_phase(d) is not None
+    }
+    pattern = os.path.join(IFC_DIR, f"{project_id}_*.ifc")
+    legacy: list[str] = []
+    for path in glob.glob(pattern):
+        base = os.path.basename(path)
+        doc_id = base.split("_", 1)[1].replace(".ifc", "") if "_" in base else ""
+        if doc_id and doc_id in stage_doc_ids:
+            continue
+        legacy.append(path)
+    if legacy:
+        return max(legacy, key=os.path.getmtime)
+
+    candidates: list[str] = []
+    for doc in docs:
+        if not _is_ifc_document(doc) or _doc_bim_phase(doc) is not None:
+            continue
+        doc_id = str(doc.get("doc_id", "")).strip()
+        if doc_id:
+            candidates.extend(glob.glob(os.path.join(IFC_DIR, f"*_{doc_id}.ifc")))
     if not candidates:
         return None
-
     recovered = max(candidates, key=os.path.getmtime)
-    # Best-effort self-heal: normalize recovered filename to "<project_id>_<suffix>.ifc"
     try:
         base = os.path.basename(recovered)
         if not base.startswith(project_id + "_"):
@@ -163,6 +274,48 @@ def _find_ifc_for_project(project_id: str) -> str | None:
     except Exception:
         pass
     return recovered
+
+
+def _find_ifc_for_project(project_id: str) -> str | None:
+    """Default IFC: master/coordination model."""
+    return _find_master_ifc_for_project(project_id)
+
+
+def _list_stage_ifc_phases(project_id: str) -> list[str]:
+    phases: list[str] = []
+    for doc in _documents_for_prefix(project_id):
+        if not _is_ifc_document(doc):
+            continue
+        ph = _doc_bim_phase(doc)
+        if ph and ph not in phases:
+            phases.append(ph)
+    return phases
+
+
+def _resolve_bim_model(
+    project_id: str, phase: str | None = None
+) -> tuple[str | None, str, str]:
+    """
+    Pick the BIM file to render. Returns (path, kind, phase_source) where
+    phase_source is 'dedicated_ifc', 'master_ifc', or ''.
+    """
+    phase_norm = _normalize_bim_phase(phase)
+    if phase_norm:
+        dedicated = _find_ifc_for_project_phase(project_id, phase_norm)
+        if dedicated:
+            return dedicated, "ifc", "dedicated_ifc"
+
+    candidates: list[tuple[str, str, float, str]] = []
+    ifc_path = _find_master_ifc_for_project(project_id)
+    if ifc_path:
+        candidates.append((ifc_path, "ifc", os.path.getmtime(ifc_path), "master_ifc"))
+    cad_path = find_cad_for_project(project_id)
+    if cad_path:
+        candidates.append((cad_path, "cad", os.path.getmtime(cad_path), ""))
+    if not candidates:
+        return None, "", ""
+    path, kind, _, source = max(candidates, key=lambda x: x[2])
+    return path, kind, source
 
 
 # BIM phase keys must match /api/dashboard/3d-model filter `value` (foundation, structure, …)
@@ -354,6 +507,86 @@ def _phase_hint_from_text(blob: str) -> str | None:
     return None
 
 
+_BIM_PHASE_ORDER = ("foundation", "structure", "mep", "cladding", "finishing")
+_PROXY_TYPES = frozenset({"IfcBuildingElementProxy", "IfcBuildingElementPart"})
+
+
+def _mesh_centroid_z(vertices: list[float]) -> float:
+    n = len(vertices) // 3
+    if n == 0:
+        return 0.0
+    return sum(vertices[i * 3 + 2] for i in range(n)) / n
+
+
+def _bim_phase_by_elevation(z_centroid: float, z_min: float, z_max: float) -> str:
+    """
+    Assign construction phase from vertical position when IFC has no typed elements
+    (common for IfcBuildingElementProxy-only exports).
+    """
+    if z_max <= z_min:
+        return "structure"
+    t = (z_centroid - z_min) / (z_max - z_min)
+    if t < 0.12:
+        return "foundation"
+    if t >= 0.88:
+        return "finishing"
+    if t >= 0.72:
+        return "cladding"
+    if t >= 0.58:
+        return "mep"
+    return "structure"
+
+
+def _apply_elevation_phases(meshes: list[dict]) -> None:
+    """
+    Re-tag meshes into construction stages using elevation when the IFC
+    doesn't meaningfully distinguish phases (common with proxy‑only exports).
+
+    Behaviour:
+    - If <5% of meshes are already non‑structural (mep/cladding/finishing),
+      treat the model as "unphased" and classify **all** meshes by height.
+    - Otherwise, only retag generic structure proxies
+      (`IfcBuildingElementProxy` / `IfcBuildingElementPart`) by height.
+    - If we still end up with zero foundation meshes, force the lowest 8%
+      of meshes into the foundation bucket so the Foundation view is never empty.
+    """
+    if not meshes:
+        return
+
+    centroids = [_mesh_centroid_z(m.get("vertices") or []) for m in meshes]
+    z_min, z_max = min(centroids), max(centroids)
+
+    total = len(meshes)
+    pre_counts = {p: 0 for p in _BIM_PHASE_ORDER}
+    for m in meshes:
+        pre_counts[m.get("phase") or "structure"] = pre_counts.get(
+            m.get("phase") or "structure", 0
+        ) + 1
+
+    non_struct = total - pre_counts.get("structure", 0)
+    unphased = total > 0 and (non_struct / float(total)) < 0.05
+
+    # First pass: apply elevation mapping either to all meshes (unphased IFC)
+    # or only to generic proxies.
+    for mesh, zc in zip(meshes, centroids):
+        if not unphased:
+            if mesh.get("phase") != "structure":
+                continue
+            ifc_type = mesh.get("ifc_type") or ""
+            if ifc_type not in _PROXY_TYPES:
+                continue
+        mesh["phase"] = _bim_phase_by_elevation(zc, z_min, z_max)
+
+    # Ensure we have at least some foundation meshes; otherwise the
+    # Foundation stage in the viewer would still be blank.
+    if not any((m.get("phase") == "foundation") for m in meshes):
+        # Sort meshes by centroid height and tag the lowest 8% as foundation.
+        sorted_pairs = sorted(zip(centroids, meshes), key=lambda t: t[0])
+        cutoff = max(1, int(round(total * 0.08)))
+        for _, mesh in sorted_pairs[:cutoff]:
+            mesh["phase"] = "foundation"
+
+
 def _bim_phase_for_shape(shape) -> str:
     """Resolve BIM phase from ifcopenshell geom iterator element."""
     try:
@@ -374,12 +607,23 @@ def _bim_phase_for_shape(shape) -> str:
             hinted = _phase_hint_from_text(blob)
             if hinted == "foundation":
                 return "foundation"
+        if ifc_type == "IfcSlab":
+            try:
+                pt = getattr(prod, "PredefinedType", None)
+                if pt and "BASE" in str(pt).upper():
+                    return "foundation"
+            except Exception:
+                pass
         return phase
     except Exception:
         return "structure"
 
 
-def _parse_ifc_to_geometry(ifc_path: str) -> dict:
+def _parse_ifc_to_geometry(
+    ifc_path: str,
+    force_phase: str | None = None,
+    fast_geometry: bool | None = None,
+) -> dict:
     """
     Parse an IFC file with ifcopenshell and return a lightweight dict:
     { "meshes": [ { "vertices": [...], "indices": [...], "normals": [...], "color": [r,g,b,a] }, ... ] }
@@ -404,16 +648,35 @@ def _parse_ifc_to_geometry(ifc_path: str) -> dict:
     settings = ifcopenshell.geom.settings()
     settings.set(settings.USE_WORLD_COORDS, True)
     settings.set(settings.WELD_VERTICES, True)
-    if os.getenv("IFC_FAST_GEOMETRY", "").strip().lower() in ("1", "true", "yes"):
+
+    # Skipping boolean opening subtractions (window/door cut-outs) is a large
+    # speedup with minor visual impact, so it's on by default for the full
+    # "All Days" master model. Dedicated per-stage IFCs default to the env var.
+    if fast_geometry is None:
+        fast_geometry = os.getenv("IFC_FAST_GEOMETRY", "").strip().lower() in (
+            "1", "true", "yes"
+        )
+    if fast_geometry:
         try:
             settings.set(settings.DISABLE_OPENING_SUBTRACTIONS, True)
         except Exception:
             logger.debug(
-                "IFC_FAST_GEOMETRY: could not set disable-opening-subtractions", exc_info=True
+                "fast geometry: could not set disable-opening-subtractions", exc_info=True
             )
 
     meshes = []
-    iterator = ifcopenshell.geom.iterator(settings, ifc_file)
+    # Run the OpenCASCADE geometry kernel across all available cores. This is by
+    # far the dominant cost for large models; ifcopenshell releases the GIL while
+    # meshing, so threading gives a near-linear speedup on the heavy elements.
+    try:
+        num_threads = max(1, (os.cpu_count() or 1))
+    except Exception:
+        num_threads = 1
+    try:
+        iterator = ifcopenshell.geom.iterator(settings, ifc_file, num_threads)
+    except TypeError:
+        # Older ifcopenshell without a num_threads parameter.
+        iterator = ifcopenshell.geom.iterator(settings, ifc_file)
 
     if not iterator.initialize():
         return {"meshes": []}
@@ -422,21 +685,28 @@ def _parse_ifc_to_geometry(ifc_path: str) -> dict:
         shape     = iterator.get()
         phase     = _bim_phase_for_shape(shape)
         geo       = shape.geometry
-        verts     = list(geo.verts)    # flat [x,y,z, x,y,z, ...]
-        faces     = list(geo.faces)    # flat [i,j,k, i,j,k, ...]
-        normals   = list(geo.normals)  # flat [nx,ny,nz, ...]
+
+        faces = np.asarray(geo.faces, dtype=np.int64)
+        if faces.size == 0:
+            if not iterator.next():
+                break
+            continue
+        faces = faces.reshape(-1, 3)            # (n_tri, 3)
+
+        verts = np.asarray(geo.verts, dtype=np.float64).reshape(-1, 3)
+        verts = np.nan_to_num(verts, nan=0.0, posinf=0.0, neginf=0.0)
+
+        normals_flat = np.asarray(geo.normals, dtype=np.float64)
+        has_normals = normals_flat.size == verts.size
+        normals_arr = (
+            np.nan_to_num(normals_flat.reshape(-1, 3), nan=0.0, posinf=0.0, neginf=0.0)
+            if has_normals else None
+        )
+
         materials = geo.materials
-        mat_ids   = list(geo.material_ids)  # one material index per face
-
-        # FIX: Handle shapes with missing material IDs so they aren't skipped
-        if not mat_ids and faces:
-                            mat_ids = [-1] * (len(faces) // 3)
-
-        # Group faces by material so we can emit one mesh per colour
-        from collections import defaultdict
-        face_groups: dict[int, list[int]] = defaultdict(list)
-        for tri_idx, mat_id in enumerate(mat_ids):
-            face_groups[mat_id].append(tri_idx)
+        mat_ids = np.asarray(geo.material_ids, dtype=np.int64)
+        if mat_ids.size != faces.shape[0]:
+            mat_ids = np.full(faces.shape[0], -1, dtype=np.int64)
 
         try:
             prod = getattr(shape, "product", None)
@@ -444,11 +714,11 @@ def _parse_ifc_to_geometry(ifc_path: str) -> dict:
         except Exception:
             ifc_type = ""
 
-        for mat_id, tri_indices in face_groups.items():
-            mat = materials[mat_id] if mat_id < len(materials) else None
+        # One mesh per distinct material colour.
+        for mat_id in (int(m) for m in np.unique(mat_ids)):
+            mat = materials[mat_id] if 0 <= mat_id < len(materials) else None
             if mat:
                 try:
-                    # diffuse may be a colour object with r/g/b attributes or callables
                     d = mat.diffuse
                     r = float(d.r() if callable(d.r) else d.r)
                     g = float(d.g() if callable(d.g) else d.g)
@@ -460,39 +730,25 @@ def _parse_ifc_to_geometry(ifc_path: str) -> dict:
             else:
                 r, g, b, a = 0.7, 0.7, 0.7, 1.0
 
-            # Ensure valid JSON numbers (browser JSON.parse rejects NaN/Infinity)
             r = _finite_or(r, 0.7)
             g = _finite_or(g, 0.7)
             b = _finite_or(b, 0.7)
             a = _finite_or(a, 1.0)
 
-            # Build a compact vertex/index buffer for this group
-            raw_indices = []
-            for ti in tri_indices:
-                raw_indices += [faces[ti*3], faces[ti*3+1], faces[ti*3+2]]
+            group_faces = faces[mat_ids == mat_id].reshape(-1)   # flat vertex refs
+            # unique vertex set + remapped indices in one vectorized pass
+            unique, inverse = np.unique(group_faces, return_inverse=True)
 
-            unique = sorted(set(raw_indices))
-            remap  = {old: new for new, old in enumerate(unique)}
-
-            out_verts   = []
-            out_normals = []
-            for vi in unique:
-                x = _finite_or(verts[vi*3], 0.0)
-                y = _finite_or(verts[vi*3+1], 0.0)
-                z = _finite_or(verts[vi*3+2], 0.0)
-                out_verts += [x, y, z]
-                if normals:
-                    nx = _finite_or(normals[vi*3], 0.0)
-                    ny = _finite_or(normals[vi*3+1], 0.0)
-                    nz = _finite_or(normals[vi*3+2], 0.0)
-                    out_normals += [nx, ny, nz]
-
-            out_indices = [remap[i] for i in raw_indices]
+            out_verts = verts[unique].reshape(-1)
+            out_normals = (
+                normals_arr[unique].reshape(-1) if normals_arr is not None
+                else np.empty(0, dtype=np.float64)
+            )
 
             meshes.append({
-                "vertices": out_verts,
-                "normals":  out_normals,
-                "indices":  out_indices,
+                "vertices": out_verts.tolist(),
+                "normals":  out_normals.tolist(),
+                "indices":  inverse.astype(np.int64).reshape(-1).tolist(),
                 "color":    [r, g, b, a],
                 "phase":    phase,
                 "ifc_type": ifc_type,
@@ -501,6 +757,12 @@ def _parse_ifc_to_geometry(ifc_path: str) -> dict:
         if not iterator.next():
             break
 
+    force = _normalize_bim_phase(force_phase)
+    if force:
+        for mesh in meshes:
+            mesh["phase"] = force
+    else:
+        _apply_elevation_phases(meshes)
     return {"meshes": meshes}
 
 
@@ -637,16 +899,160 @@ def _save_ifc_upload(prefix_id: str, doc_id: str, file_storage) -> dict:
     return {"status": "ok", "filename": filename, "file_url": rel_url, "doc_id": doc_id}
 
 
+def _stage_ifc_labels() -> dict[str, str]:
+    return {
+        "foundation": "Foundation",
+        "structure": "Structural Frame",
+        "mep": "MEP Systems",
+        "cladding": "Cladding & Façade",
+        "finishing": "Interior Finishing",
+    }
+
+
+def _remove_ifc_document(prefix_id: str, doc_id: str) -> None:
+    docs = _documents_for_prefix(prefix_id)
+    container = None
+    if prefix_id in STORE_PROJECTS:
+        container = STORE_PROJECTS[prefix_id]
+    elif prefix_id in DRAFTS:
+        container = DRAFTS[prefix_id]
+    if container is not None:
+        container["documents"] = [d for d in docs if d.get("doc_id") != doc_id]
+    for path in glob.glob(os.path.join(IFC_DIR, f"*_{doc_id}.ifc")):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _register_ifc_document(
+    prefix_id: str,
+    doc_id: str,
+    filename: str,
+    size_kb: int,
+    bim_phase: str | None,
+) -> dict:
+    """Register or replace IFC metadata on draft/project (one file per stage)."""
+    labels = _stage_ifc_labels()
+    phase = _normalize_bim_phase(bim_phase)
+    docs = _documents_for_prefix(prefix_id)
+    container = None
+    if prefix_id in STORE_PROJECTS:
+        container = STORE_PROJECTS[prefix_id]
+    elif prefix_id in DRAFTS:
+        container = DRAFTS[prefix_id]
+    if container is None:
+        return {}
+
+    if phase:
+        for old in list(docs):
+            if _doc_bim_phase(old) == phase and old.get("doc_id"):
+                _remove_ifc_document(prefix_id, str(old["doc_id"]))
+
+    doc = {
+        "doc_id": doc_id,
+        "name": filename or f"{labels.get(phase, 'BIM')}.ifc",
+        "type": "IFC",
+        "category": "BIM Model" if not phase else f"BIM — {labels.get(phase, phase.title())}",
+        "size_kb": size_kb,
+        "version_note": "",
+        "bim_phase": phase or "",
+        "uploaded_at": datetime.now().isoformat(),
+    }
+    container.setdefault("documents", [])
+    container["documents"] = [
+        d for d in container["documents"] if d.get("doc_id") != doc_id
+    ]
+    container["documents"].append(doc)
+    if prefix_id in DRAFTS:
+        DRAFTS[prefix_id]["step"] = max(DRAFTS[prefix_id].get("step", 0), 9)
+        DRAFTS[prefix_id]["updated_at"] = datetime.now().isoformat()
+    store.save()
+    return doc
+
+
+def _prewarm_ifc_geometry(path: str, project_id: str, phase: str | None) -> None:
+    """Kick off a background parse right after upload so the dashboard is instant
+    when first opened. No-op if caching is off or the file is already cached."""
+    if not _ifc_geometry_cache_enabled():
+        return
+    if not path or not os.path.isfile(path):
+        return
+    try:
+        if _read_geometry_cache(path) is not None:
+            return
+    except Exception:
+        pass
+
+    phase_norm = _normalize_bim_phase(phase)
+    if phase_norm:
+        phase_source, phase_req, force_phase = "dedicated_ifc", phase_norm, phase_norm
+    else:
+        phase_source, phase_req, force_phase = "master_ifc", "", None
+
+    started = False
+    with _PARSE_LOCK:
+        if _PARSE_JOBS.get(path) != "running":
+            _PARSE_JOBS[path] = "running"
+            started = True
+    if started:
+        threading.Thread(
+            target=_run_parse_job,
+            args=(path, "ifc", phase_source, phase_req, force_phase, project_id),
+            daemon=True,
+        ).start()
+        logger.info(
+            "ifc-geometry PREWARM started project=%s phase=%s path=%s",
+            project_id, phase_req or "all", os.path.basename(path),
+        )
+
+
+def _handle_ifc_upload(prefix_id: str, is_draft: bool) -> tuple[dict, int]:
+    f = request.files.get("file")
+    if not f:
+        return {"error": "No file in request"}, 400
+
+    bim_phase = request.form.get("bim_phase", "").strip()
+    if bim_phase and _normalize_bim_phase(bim_phase) is None:
+        return {"error": "Invalid bim_phase"}, 400
+
+    doc_id = request.form.get("doc_id", "").strip()
+    if not doc_id or doc_id == "0":
+        doc_id = "DOC-" + str(uuid.uuid4())[:8].upper()
+    try:
+        size_kb = max(1, int((f.content_length or 0) // 1024))
+    except Exception:
+        size_kb = 0
+
+    payload = _save_ifc_upload(prefix_id, doc_id, f)
+    doc = _register_ifc_document(
+        prefix_id,
+        doc_id,
+        f.filename or payload.get("filename", "model.ifc"),
+        size_kb,
+        bim_phase,
+    )
+    payload["doc"] = doc
+    payload["bim_phase"] = doc.get("bim_phase") or ""
+
+    # Pre-warm the geometry cache in the background so the dashboard opens
+    # instantly the first time this model (or stage) is viewed.
+    try:
+        saved_path = os.path.join(IFC_DIR, payload.get("filename", ""))
+        _prewarm_ifc_geometry(saved_path, prefix_id, doc.get("bim_phase") or None)
+        payload["prewarming"] = True
+    except Exception:
+        logger.debug("IFC prewarm dispatch failed", exc_info=True)
+    return payload, 200
+
+
 @ifc_bp.route("/api/new-project/draft/<draft_id>/documents/upload-ifc", methods=["POST"])
 def upload_ifc(draft_id: str):
     """Receive a binary IFC upload from the New Project wizard."""
-    f = request.files.get("file")
-    if not f:
-        return jsonify({"error": "No file in request"}), 400
-
-    doc_id = request.form.get("doc_id", "0")
-    payload = _save_ifc_upload(draft_id, doc_id, f)
-    return jsonify(payload), 200
+    if draft_id not in DRAFTS:
+        return jsonify({"error": "Draft not found"}), 404
+    payload, code = _handle_ifc_upload(draft_id, is_draft=True)
+    return jsonify(payload), code
 
 
 @ifc_bp.route("/api/new-project/active/<project_id>/documents/upload-ifc", methods=["POST"])
@@ -654,13 +1060,92 @@ def upload_ifc_active(project_id: str):
     """IFC upload when editing an active project in the wizard."""
     if project_id not in STORE_PROJECTS or STORE_PROJECTS[project_id].get("status") != "active":
         return jsonify({"error": "Active project not found"}), 404
+    payload, code = _handle_ifc_upload(project_id, is_draft=False)
+    return jsonify(payload), code
 
+
+def _ifc_geometry_status(prefix_id: str, doc_id: str) -> dict:
+    """Report whether a just-uploaded IFC's geometry cache is ready (pre-warm)."""
+    doc_id = (doc_id or "").strip()
+    if not doc_id:
+        return {"status": "unknown"}
+    path = os.path.join(IFC_DIR, f"{prefix_id}_{doc_id}.ifc")
+    if not os.path.isfile(path):
+        return {"status": "missing"}
+    if not _ifc_geometry_cache_enabled():
+        return {"status": "ready"}  # nothing to pre-warm; served on demand
+    try:
+        if _read_geometry_cache(path) is not None:
+            return {"status": "ready"}
+    except Exception:
+        pass
+    with _PARSE_LOCK:
+        state = _PARSE_JOBS.get(path)
+    if state == "running":
+        return {"status": "preparing"}
+    if state == "error":
+        return {"status": "error"}
+    # File exists, not cached, no active job — kick off a pre-warm so it completes.
+    phase = None
+    for d in _documents_for_prefix(prefix_id):
+        if str(d.get("doc_id")) == doc_id:
+            phase = _doc_bim_phase(d)
+            break
+    _prewarm_ifc_geometry(path, prefix_id, phase)
+    return {"status": "preparing"}
+
+
+@ifc_bp.route("/api/new-project/draft/<draft_id>/documents/ifc-status", methods=["GET"])
+def ifc_status_draft(draft_id: str):
+    return jsonify(_ifc_geometry_status(draft_id, request.args.get("doc_id", "")))
+
+
+@ifc_bp.route("/api/new-project/active/<project_id>/documents/ifc-status", methods=["GET"])
+def ifc_status_active(project_id: str):
+    return jsonify(_ifc_geometry_status(project_id, request.args.get("doc_id", "")))
+
+
+def _cad_ext_from_upload(file_storage) -> str:
+    name = (file_storage.filename or "").strip()
+    ext = os.path.splitext(name)[1].lower().lstrip(".")
+    if ext in ("dwg", "dxf"):
+        return ext
+    return ""
+
+
+@ifc_bp.route("/api/new-project/draft/<draft_id>/documents/upload-cad", methods=["POST"])
+def upload_cad_draft(draft_id: str):
+    """Receive a DWG or DXF upload from the New Project wizard."""
     f = request.files.get("file")
     if not f:
         return jsonify({"error": "No file in request"}), 400
-
+    ext = _cad_ext_from_upload(f)
+    if not ext:
+        return jsonify({"error": "Only .dwg and .dxf files are supported."}), 400
     doc_id = request.form.get("doc_id", "0")
-    payload = _save_ifc_upload(project_id, doc_id, f)
+    try:
+        payload = save_cad_upload(draft_id, doc_id, f, ext)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify(payload), 200
+
+
+@ifc_bp.route("/api/new-project/active/<project_id>/documents/upload-cad", methods=["POST"])
+def upload_cad_active(project_id: str):
+    """DWG/DXF upload when editing an active project in the wizard."""
+    if project_id not in STORE_PROJECTS or STORE_PROJECTS[project_id].get("status") != "active":
+        return jsonify({"error": "Active project not found"}), 404
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "No file in request"}), 400
+    ext = _cad_ext_from_upload(f)
+    if not ext:
+        return jsonify({"error": "Only .dwg and .dxf files are supported."}), 400
+    doc_id = request.form.get("doc_id", "0")
+    try:
+        payload = save_cad_upload(project_id, doc_id, f, ext)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     return jsonify(payload), 200
 
 
@@ -735,7 +1220,7 @@ def ifc_cache_smoke():
 
     try:
         t0 = time.perf_counter()
-        geo_cold = _parse_ifc_to_geometry(path)
+        geo_cold = _parse_ifc_to_geometry(path, fast_geometry=True)
         cold_parse_ms = round((time.perf_counter() - t0) * 1000, 2)
         n_cold = len(geo_cold.get("meshes") or [])
 
@@ -781,10 +1266,23 @@ def ifc_cache_smoke():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+@ifc_bp.route("/api/project/<project_id>/bim-stages", methods=["GET"])
+def get_bim_stages(project_id: str):
+    """Which construction stages have a dedicated IFC upload."""
+    return jsonify(
+        {
+            "status": "ok",
+            "stage_ifc_phases": _list_stage_ifc_phases(project_id),
+            "has_master_ifc": bool(_find_master_ifc_for_project(project_id)),
+        }
+    )
+
+
 @ifc_bp.route("/api/project/<project_id>/ifc-model", methods=["GET"])
 def get_ifc_model_url(project_id: str):
-    """Return the static URL of the IFC file (used by old viewer path)."""
-    path = _find_ifc_for_project(project_id)
+    """Return the static URL of the BIM file (IFC, DWG, or DXF)."""
+    phase = (request.args.get("phase") or "").strip().lower()
+    path, _kind, _src = _resolve_bim_model(project_id, phase or None)
     if not path:
         return jsonify({"file_url": None})
     rel = os.path.relpath(path, os.path.dirname(os.path.dirname(__file__)))
@@ -792,73 +1290,186 @@ def get_ifc_model_url(project_id: str):
     return jsonify({"file_url": url})
 
 
+def _build_geometry_payload(
+    path: str,
+    kind: str,
+    phase_source: str,
+    phase_req: str,
+    force_phase: str | None,
+    project_id: str,
+) -> bytes:
+    """Parse a BIM file and return the JSON payload bytes (also written to cache)."""
+    if kind == "ifc":
+        # Full fidelity (window/door openings preserved). Cached to disk so the
+        # heavy parse is paid only once per file.
+        geo = _parse_ifc_to_geometry(path, force_phase=force_phase)
+    else:
+        geo = parse_cad_to_geometry(path)
+
+    status = "ok"
+    if kind == "cad" and geo.get("cad_wireframe_only"):
+        status = "cad_wireframe_only"
+    payload = {
+        "meshes": geo.get("meshes", []),
+        "lines": geo.get("lines", []),
+        "bim_mode": geo.get("bim_mode", "3d"),
+        "status": status,
+        "bim_format": kind,
+        "source_format": geo.get("source_format") if kind == "cad" else "ifc",
+        "phase_source": phase_source or "master_ifc",
+        "resolved_phase": phase_req or "all",
+        "stage_ifc_phases": _list_stage_ifc_phases(project_id),
+    }
+    if phase_source == "dedicated_ifc":
+        payload["dedicated_stage_ifc"] = True
+    out = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    if _ifc_geometry_cache_enabled():
+        try:
+            _write_geometry_cache(path, out)
+        except Exception:
+            logger.warning("IFC geometry cache write failed", exc_info=True)
+    return out
+
+
+def _run_parse_job(
+    path: str,
+    kind: str,
+    phase_source: str,
+    phase_req: str,
+    force_phase: str | None,
+    project_id: str,
+) -> None:
+    """Background worker: parse + cache a BIM file, then clear the job flag."""
+    t0 = time.perf_counter()
+    try:
+        out = _build_geometry_payload(
+            path, kind, phase_source, phase_req, force_phase, project_id
+        )
+        logger.info(
+            "ifc-geometry BACKGROUND parse done project=%s kind=%s bytes=%s parse_ms=%.1f",
+            project_id, kind, len(out), (time.perf_counter() - t0) * 1000,
+        )
+    except Exception:
+        logger.exception("Background BIM parse failed for %s", path)
+        with _PARSE_LOCK:
+            _PARSE_JOBS[path] = "error"
+        return
+    with _PARSE_LOCK:
+        _PARSE_JOBS.pop(path, None)
+
+
+@ifc_bp.route("/api/project/<project_id>/bim-geometry", methods=["GET"])
 @ifc_bp.route("/api/project/<project_id>/ifc-geometry", methods=["GET"])
 def get_ifc_geometry(project_id: str):
     """
-    Parse the project's IFC file server-side and return JSON geometry
-    that the browser can render directly with Three.js — no WASM needed.
+    Parse the project's BIM file (IFC, DWG, or DXF) server-side and return JSON
+    geometry that the browser can render directly with Three.js — no WASM needed.
+
+    Query: ?phase=foundation|structure|mep|cladding|finishing|all
+    Uses a dedicated per-stage IFC when uploaded; otherwise the master IFC with
+  auto phase tagging.
     """
-    # Fail fast if the IFC directory itself is missing.
-    if not os.path.isdir(IFC_DIR):
+    if not os.path.isdir(IFC_DIR) and not os.path.isdir(CAD_DIR):
         return (
             jsonify({"meshes": [], "status": "ifc_dir_missing"}),
             404,
         )
 
-    path = _find_ifc_for_project(project_id)
+    phase_req = (request.args.get("phase") or "").strip().lower()
+    if phase_req in ("", "all"):
+        phase_req = ""
+
+    path, kind, phase_source = _resolve_bim_model(
+        project_id, phase_req or None
+    )
     if not path:
         return (
             jsonify({"meshes": [], "status": "no_ifc_for_project"}),
             404,
         )
 
+    force_phase = None
+    if phase_source == "dedicated_ifc" and phase_req:
+        force_phase = phase_req
+
     try:
         t_req = time.perf_counter()
         if _ifc_geometry_cache_enabled():
             cached = _read_geometry_cache(path)
             if cached is not None:
+                # Disk cache is keyed by file path (full model). Phase filtering is
+                # done in the browser unless this is a dedicated per-stage IFC file.
                 logger.info(
-                    "ifc-geometry project=%s cache_hit=1 json_bytes=%s total_ms=%.1f",
+                    "ifc-geometry project=%s kind=%s phase=%s cache_hit=1 json_bytes=%s total_ms=%.1f",
                     project_id,
+                    kind,
+                    phase_req or "all",
                     len(cached),
                     (time.perf_counter() - t_req) * 1000,
                 )
                 return _json_response_maybe_gzip(cached)
 
-        t_parse = time.perf_counter()
-        geo = _parse_ifc_to_geometry(path)
-        parse_ms = (time.perf_counter() - t_parse) * 1000
-
-        t_json = time.perf_counter()
-        payload = {"meshes": geo.get("meshes", []), "status": "ok"}
-        out = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        json_ms = (time.perf_counter() - t_json) * 1000
-
-        mesh_n = len(geo.get("meshes") or [])
+        # Cache miss. To avoid blocking the browser for minutes on a heavy first
+        # parse, run it in a background thread and tell the client to poll. When
+        # the cache is disabled we have no place to stash the result, so parse
+        # inline as a fallback.
         if _ifc_geometry_cache_enabled():
-            try:
-                _write_geometry_cache(path, out)
-            except Exception:
-                logger.warning(
-                    "IFC geometry cache write failed; serving uncached", exc_info=True
+            started = False
+            prior_error = False
+            with _PARSE_LOCK:
+                state = _PARSE_JOBS.get(path)
+                if state == "error":
+                    # Surface the failure once, then clear so a reload can retry.
+                    _PARSE_JOBS.pop(path, None)
+                    prior_error = True
+                elif state != "running":
+                    _PARSE_JOBS[path] = "running"
+                    started = True
+            if prior_error:
+                return jsonify({"meshes": [], "status": "parse_failed"}), 500
+            if started:
+                threading.Thread(
+                    target=_run_parse_job,
+                    args=(path, kind, phase_source, phase_req or "", force_phase, project_id),
+                    daemon=True,
+                ).start()
+                logger.info(
+                    "ifc-geometry project=%s kind=%s phase=%s background parse STARTED",
+                    project_id, kind, phase_req or "all",
                 )
+            return (
+                jsonify({
+                    "status": "parsing",
+                    "meshes": [],
+                    "phase_source": phase_source or "master_ifc",
+                    "resolved_phase": phase_req or "all",
+                }),
+                202,
+            )
 
+        # Cache disabled: parse inline (blocking).
+        out = _build_geometry_payload(
+            path, kind, phase_source, phase_req or "", force_phase, project_id
+        )
         logger.info(
-            "ifc-geometry project=%s cache_hit=0 meshes=%s parse_ms=%.1f json_serialize_ms=%.1f json_bytes=%s total_ms=%.1f gzip=%s",
-            project_id,
-            mesh_n,
-            parse_ms,
-            json_ms,
-            len(out),
-            (time.perf_counter() - t_req) * 1000,
-            _ifc_geometry_gzip_enabled()
-            and "gzip" in (request.headers.get("Accept-Encoding") or "").lower(),
+            "ifc-geometry project=%s kind=%s cache_hit=0 inline json_bytes=%s total_ms=%.1f",
+            project_id, kind, len(out), (time.perf_counter() - t_req) * 1000,
         )
         return _json_response_maybe_gzip(out)
     except RuntimeError as e:
-        # Typically raised when ifcopenshell is not installed.
+        msg = str(e)
+        if "3d solid object" in msg.lower() or "acis geometry" in msg.lower():
+            status = "cad_3d_solids_unsupported"
+        elif "no 3d geometry" in msg.lower() or "no geometry found" in msg.lower():
+            status = "cad_no_3d_geometry"
+        elif "ezdxf" in msg.lower() or "dwg" in msg.lower() or "dxf" in msg.lower():
+            status = "cad_parse_failed"
+        elif "ifcopenshell" in msg.lower():
+            status = "ifcopenshell_missing"
+        else:
+            status = "parse_failed"
         return (
-            jsonify({"meshes": [], "status": "ifcopenshell_missing", "error": str(e)}),
+            jsonify({"meshes": [], "lines": [], "status": status, "error": msg}),
             500,
         )
     except Exception as e:

@@ -327,7 +327,9 @@ async function syncIfcViewerWithActiveProject() {
     }
 
     if (ifcProjectId && typeof window.IFCViewer.loadIFC === "function") {
-        window.IFCViewer.loadIFC(null, ifcProjectId);
+        const sel = $("timeFilter");
+        const phase = sel && sel.value ? sel.value : "all";
+        window.IFCViewer.loadIFC(null, ifcProjectId, phase);
     } else if (typeof window.IFCViewer.showNoModel === "function") {
         window.IFCViewer.showNoModel();
     }
@@ -552,9 +554,9 @@ async function loadModelData(filter = "all") {
         _syncPhaseMarker(filter);
         // NOTE: #completionPct badge is owned exclusively by loadProgressData() — never written here.
 
-        // Filter Three.js IFC meshes to match the BIM phase dropdown
-        if (window.IFCViewer && typeof window.IFCViewer.setPhaseFilter === "function") {
-            window.IFCViewer.setPhaseFilter(filter || "all");
+        // Reload BIM geometry for the selected construction stage (uses per-stage IFC when uploaded).
+        if (window.IFCViewer && typeof window.IFCViewer.loadBimModel === "function") {
+            await window.IFCViewer.loadBimModel(null, ACTIVE_PROJECT_ID, filter || "all");
         }
 
     } catch (err) {
@@ -953,14 +955,42 @@ const DOC_TYPE_STYLES = {
 
 function renderDashboardDocItem(doc) {
     const style = DOC_TYPE_STYLES[doc.type] ?? { bg: "#555", label: (doc.type || "FILE").slice(0, 3).toUpperCase() };
+    const safeName = String(doc.name || "document").replace(/"/g, "&quot;");
     return `
-        <div class="doc-item" data-id="${doc.id}" title="Download ${doc.name}">
+        <div class="doc-item" data-id="${doc.id}" title="Download ${safeName}">
             <div class="doc-icon" style="background:${style.bg}">${style.label}</div>
             <div class="doc-info">
                 <span class="doc-name">${doc.name}</span>
                 <span class="doc-meta">${doc.updated} · ${doc.size}</span>
             </div>
+            <button class="doc-delete-btn" data-id="${doc.id}" data-name="${safeName}" title="Delete ${safeName}" aria-label="Delete ${safeName}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
         </div>`;
+}
+
+async function deleteDashboardDoc(docId, docName) {
+    if (!docId) return;
+    if (!ACTIVE_PROJECT_ID) {
+        showToast("No active project selected.", "error");
+        return;
+    }
+    if (!window.confirm(`Delete "${docName || "this document"}"? This cannot be undone.`)) return;
+    try {
+        const res = await fetch(
+            `/api/project/documents/${encodeURIComponent(docId)}?project_id=${encodeURIComponent(ACTIVE_PROJECT_ID)}`,
+            { method: "DELETE" }
+        );
+        if (!res.ok) {
+            const j = await res.json().catch(() => ({}));
+            throw new Error(j.message || `Delete failed (HTTP ${res.status})`);
+        }
+        showToast(`Deleted "${docName || docId}".`, "success");
+        await loadDocumentsWidget();
+    } catch (err) {
+        console.error("[Documents] Delete error:", err);
+        showToast("Could not delete document: " + err.message, "error");
+    }
 }
 
 async function loadDocumentsWidget() {
@@ -975,7 +1005,13 @@ async function loadDocumentsWidget() {
             list.innerHTML = `<p style="color:var(--text-secondary,#A0A0A0);font-size:0.85rem;padding:0.5rem 0;">No project documents uploaded.</p>`;
             return;
         }
-        list.innerHTML = docs.slice(0, 6).map(renderDashboardDocItem).join("");
+        list.innerHTML = docs.map(renderDashboardDocItem).join("");
+        list.querySelectorAll(".doc-delete-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                deleteDashboardDoc(btn.dataset.id, btn.dataset.name);
+            });
+        });
         list.querySelectorAll(".doc-item").forEach(item => {
             item.addEventListener("click", () => {
                 const name = item.querySelector(".doc-name")?.textContent || "document";

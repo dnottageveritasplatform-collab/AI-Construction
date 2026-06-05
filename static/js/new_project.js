@@ -59,6 +59,15 @@ const STEPS = [
 // Zone colour palette
 const ZONE_COLOURS = ["#4F8EF7","#3DD68C","#F59E0B","#F06060","#A78BFA","#EC4899","#06B6D4","#84CC16"];
 
+/** Construction stages for optional per-stage IFC uploads (dashboard BIM dropdown). */
+const BIM_STAGE_IFC = [
+    { phase: "foundation", label: "Foundation" },
+    { phase: "structure",  label: "Structural Frame" },
+    { phase: "mep",        label: "MEP Systems" },
+    { phase: "cladding",   label: "Cladding & Façade" },
+    { phase: "finishing",  label: "Interior Finishing" },
+];
+
 // ─────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────
@@ -1442,13 +1451,170 @@ function loadStep8() {
         { icon: "🦺", label: "Site Safety Plan (DOCX)", category: "Safety" },
         { icon: "📄", label: "Permit Application (PDF)", category: "Permits" },
         { icon: "📋", label: "Material Specification Sheet (PDF)", category: "Materials" },
+        {
+            icon: "🏗️",
+            label: "BIM Model (IFC)",
+            category: "BIM Model",
+            note: "Upload one full building IFC for <strong>All Days</strong> in the dashboard viewer. Shown when no stage-specific file exists for a phase.",
+        },
     ];
-    document.getElementById("docRecList").innerHTML = docs.map(d =>
-        `<div class="doc-rec-item"><span class="doc-rec-icon">${d.icon}</span>${d.label}</div>`
-    ).join("");
+    document.getElementById("docRecList").innerHTML = docs.map(d => {
+        let html = `<div class="doc-rec-item"><span class="doc-rec-icon">${d.icon}</span>${d.label}</div>`;
+        if (d.note) html += `<div class="doc-rec-note">${d.note}</div>`;
+        return html;
+    }).join("");
 
     setupDocUpload();   // ensure listeners are attached even when resuming directly to step 8
+    renderStageIfcGrid();
     renderUploadedDocs();
+}
+
+function _stageIfcDoc(phase) {
+    return STATE.uploadedDocs.find(d => (d.bim_phase || "").toLowerCase() === phase);
+}
+
+// Tracks pre-warm status per phase: "preparing" | "ready" | "error".
+const _stageIfcStatus = {};
+
+function _stageIfcStatusHtml(phase) {
+    const st = _stageIfcStatus[phase];
+    if (st === "preparing") return `<span class="stage-ifc-spin"></span>Preparing model…`;
+    if (st === "ready")     return `✓ Model ready`;
+    if (st === "error")     return `⚠ Could not prepare model (will build on first view)`;
+    return "";
+}
+
+function _renderStageIfcStatus(phase) {
+    const el = document.getElementById(`stage-ifc-status-${phase}`);
+    if (!el) return;
+    const st = _stageIfcStatus[phase] || "";
+    el.className = "stage-ifc-status" + (st ? " " + st : "");
+    el.innerHTML = _stageIfcStatusHtml(phase);
+}
+
+function renderStageIfcGrid() {
+    const grid = document.getElementById("stageIfcGrid");
+    if (!grid) return;
+    grid.innerHTML = BIM_STAGE_IFC.map(({ phase, label }) => {
+        const existing = _stageIfcDoc(phase);
+        const fileLabel = existing ? existing.name : "No file";
+        const st = _stageIfcStatus[phase] || "";
+        return `
+            <div class="stage-ifc-row" data-phase="${phase}">
+                <span class="stage-ifc-label">${label}</span>
+                <span class="stage-ifc-file" id="stage-ifc-name-${phase}" title="${fileLabel}">${fileLabel}</span>
+                <label class="stage-ifc-btn">
+                    ${existing ? "Replace" : "Upload IFC"}
+                    <input type="file" accept=".ifc" style="display:none" onchange="uploadStageIfc('${phase}', this.files[0]); this.value='';">
+                </label>
+                ${existing ? `<button type="button" class="stage-ifc-clear" onclick="removeStageIfc('${phase}')" title="Remove">✕</button>` : "<span></span>"}
+                <div class="stage-ifc-status ${st}" id="stage-ifc-status-${phase}">${_stageIfcStatusHtml(phase)}</div>
+            </div>`;
+    }).join("");
+}
+
+async function pollStageIfcStatus(phase, docId) {
+    if (!docId) return;
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 30 * 60 * 1000;
+    while (true) {
+        // Stop if the user removed/replaced this stage's file.
+        const cur = _stageIfcDoc(phase);
+        if (!cur || cur.doc_id !== docId) return;
+        let st = "error";
+        try {
+            const res = await fetch(`${wizardApiBase()}/documents/ifc-status?doc_id=${encodeURIComponent(docId)}`);
+            const json = await res.json();
+            st = json.status || "error";
+        } catch (e) {
+            st = "error";
+        }
+        if (st === "ready") {
+            _stageIfcStatus[phase] = "ready";
+            _renderStageIfcStatus(phase);
+            return;
+        }
+        if (st === "error" || st === "missing" || st === "unknown") {
+            _stageIfcStatus[phase] = "error";
+            _renderStageIfcStatus(phase);
+            return;
+        }
+        _stageIfcStatus[phase] = "preparing";
+        _renderStageIfcStatus(phase);
+        if (Date.now() - startedAt > TIMEOUT_MS) return;
+        await new Promise(r => setTimeout(r, 3000));
+    }
+}
+
+async function uploadStageIfc(phase, file) {
+    if (!file) return;
+    const ext = file.name.split(".").pop().toUpperCase();
+    if (ext !== "IFC") {
+        showToast("Stage uploads must be .ifc files.", "error");
+        return;
+    }
+    const docId = "DOC-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const existing = _stageIfcDoc(phase);
+    if (existing) {
+        STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== existing.doc_id);
+    }
+    const doc = {
+        doc_id: docId,
+        name: file.name,
+        type: "IFC",
+        category: "BIM Model",
+        bim_phase: phase,
+        size_kb: Math.round(file.size / 1024),
+        version_note: "",
+        file_url: null,
+    };
+    STATE.uploadedDocs.push(doc);
+    renderStageIfcGrid();
+    renderUploadedDocs();
+
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("doc_id", docId);
+        formData.append("bim_phase", phase);
+        if (STATE.draftId) formData.append("draft_id", STATE.draftId);
+        if (STATE.editProjectId) formData.append("project_id", STATE.editProjectId);
+
+        const res = await fetch(`${wizardApiBase()}/documents/upload-ifc`, {
+            method: "POST",
+            body: formData,
+        });
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error || ("Upload failed: " + res.status));
+        }
+        const json = await res.json();
+        doc.file_url = json.file_url;
+        doc.doc_id = json.doc_id || docId;
+        if (json.doc) Object.assign(doc, json.doc);
+        _stageIfcStatus[phase] = "preparing";
+        renderStageIfcGrid();
+        renderUploadedDocs();
+        const label = BIM_STAGE_IFC.find(s => s.phase === phase)?.label || phase;
+        showToast(`${label} IFC uploaded.`, "success");
+        // Watch the server's background pre-warm so the user sees it finish.
+        pollStageIfcStatus(phase, doc.doc_id);
+    } catch (err) {
+        console.error("[Stage IFC]", err);
+        STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== docId);
+        delete _stageIfcStatus[phase];
+        renderStageIfcGrid();
+        renderUploadedDocs();
+        showToast("Stage IFC upload failed: " + err.message, "error");
+    }
+}
+
+function removeStageIfc(phase) {
+    const existing = _stageIfcDoc(phase);
+    if (!existing) return;
+    delete _stageIfcStatus[phase];
+    removeUploadedDoc(existing.doc_id);
+    renderStageIfcGrid();
 }
 
 let _docUploadInitialised = false;   // guard against duplicate listeners
@@ -1491,23 +1657,29 @@ function handleFiles(files) {
         renderUploadedDocs();
 
         try {
-            if (ext === "IFC") {
-                // IFC files: upload the actual binary so the dashboard can render it
+            if (ext === "IFC" || ext === "DWG" || ext === "DXF") {
                 const formData = new FormData();
                 formData.append("file",   file);
                 formData.append("doc_id", docId);
                 if (STATE.draftId) formData.append("draft_id", STATE.draftId);
                 if (STATE.editProjectId) formData.append("project_id", STATE.editProjectId);
 
-                const res = await fetch(`${wizardApiBase()}/documents/upload-ifc`, { method: "POST", body: formData });
-                if (!res.ok) throw new Error("Upload failed: " + res.status);
+                const uploadPath = ext === "IFC"
+                    ? `${wizardApiBase()}/documents/upload-ifc`
+                    : `${wizardApiBase()}/documents/upload-cad`;
+                const res = await fetch(uploadPath, { method: "POST", body: formData });
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => ({}));
+                    throw new Error(errJson.error || ("Upload failed: " + res.status));
+                }
                 const json = await res.json();
 
-                // Store the returned URL on the doc so the dashboard can find it
                 doc.file_url  = json.file_url;
                 doc.doc_id    = json.doc_id || docId;
+                if (json.doc) Object.assign(doc, json.doc);
                 renderUploadedDocs();
-                showToast("IFC file uploaded — BIM viewer ready.", "success");
+                renderStageIfcGrid();
+                showToast(`${ext} uploaded — BIM viewer ready.`, "success");
             } else {
                 // Non-IFC: register metadata only (existing behaviour)
                 await apiFetch(`${wizardApiBase()}/documents`, {
@@ -1527,17 +1699,23 @@ function guessCategory(ext) {
     if (ext === "PDF")  return "Blueprints / Permits";
     if (ext === "DOCX") return "Documents";
     if (ext === "XLSX") return "Spreadsheets";
-    if (ext === "IFC")  return "BIM Model";
+    if (ext === "IFC" || ext === "DWG" || ext === "DXF") return "BIM Model";
     return "Other";
 }
 
 function renderUploadedDocs() {
     const list = document.getElementById("uploadedDocsList");
     if (!list) return;
-    list.innerHTML = STATE.uploadedDocs.map(d => `
+    const stagePhases = new Set(BIM_STAGE_IFC.map(s => s.phase));
+    const general = STATE.uploadedDocs.filter(d => !stagePhases.has((d.bim_phase || "").toLowerCase()));
+    if (!general.length) {
+        list.innerHTML = "";
+        return;
+    }
+    list.innerHTML = general.map(d => `
         <div class="doc-item">
             <span class="doc-type-badge">${d.type}</span>
-            <span class="doc-name">${d.name}</span>
+            <span class="doc-name">${d.name}${d.bim_phase ? ` <span style="color:var(--muted)">(${d.bim_phase})</span>` : ""}</span>
             <span class="doc-size">${d.size_kb > 1024 ? (d.size_kb/1024).toFixed(1)+"MB" : d.size_kb+"KB"}</span>
             <button class="doc-remove-btn" onclick="removeUploadedDoc('${d.doc_id}')" title="Remove">✕</button>
         </div>
@@ -1548,6 +1726,7 @@ function removeUploadedDoc(docId) {
     STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== docId);
     apiFetch(`${wizardApiBase()}/documents/${encodeURIComponent(docId)}`, { method: "DELETE" }).catch(() => {});
     renderUploadedDocs();
+    renderStageIfcGrid();
 }
 
 // ─────────────────────────────────────────────────────────

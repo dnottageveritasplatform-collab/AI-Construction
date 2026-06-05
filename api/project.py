@@ -15,6 +15,7 @@ from data.project_store import PROJECTS as STORE_PROJECTS, store
 
 project_bp = Blueprint("project", __name__, url_prefix="/api/project")
 IFC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "uploads", "ifc")
+CAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "uploads", "cad")
 
 # ---------------------------------------------------------------------------
 # Static project data (would come from a DB / BIM API in production)
@@ -196,33 +197,94 @@ def get_documents():
                 "updated": d.get("uploaded_at", "").replace("T", " ")[:16] or "Recently",
             })
 
-        # Also surface IFC uploads present on disk for this project; this keeps
-        # the documents list truthful when IFC exists but wasn't registered in
-        # project["documents"].
+        # Also surface BIM uploads (IFC / DWG / DXF) on disk for this project.
         try:
+            disk_bim: list[tuple[str, str, str]] = []
             if os.path.isdir(IFC_DIR):
-                for path in sorted(glob.glob(os.path.join(IFC_DIR, f"{project_id}_*.ifc")), key=os.path.getmtime, reverse=True):
-                    base = os.path.basename(path)
-                    suffix = base[len(project_id) + 1:] if base.startswith(project_id + "_") else base
-                    stem = suffix[:-4] if suffix.lower().endswith(".ifc") else suffix
-                    if stem in seen_ids:
-                        continue
-                    sz = os.path.getsize(path)
-                    size = f"{sz / (1024 * 1024):.1f}MB" if sz >= (1024 * 1024) else f"{max(1, round(sz / 1024))}KB"
-                    updated = datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M")
-                    normalized.append({
-                        "id": stem or base,
-                        "name": base,
-                        "type": "IFC",
-                        "size": size,
-                        "updated": updated,
-                    })
+                for path in glob.glob(os.path.join(IFC_DIR, f"{project_id}_*.ifc")):
+                    disk_bim.append((path, "IFC", ".ifc"))
+            if os.path.isdir(CAD_DIR):
+                for ext, typ in ((".dwg", "DWG"), (".dxf", "DXF")):
+                    for path in glob.glob(os.path.join(CAD_DIR, f"{project_id}_*{ext}")):
+                        disk_bim.append((path, typ, ext))
+            for path, typ, ext in sorted(disk_bim, key=lambda x: os.path.getmtime(x[0]), reverse=True):
+                base = os.path.basename(path)
+                suffix = base[len(project_id) + 1 :] if base.startswith(project_id + "_") else base
+                stem = suffix[: -len(ext)] if suffix.lower().endswith(ext) else suffix
+                if stem in seen_ids:
+                    continue
+                sz = os.path.getsize(path)
+                size = f"{sz / (1024 * 1024):.1f}MB" if sz >= (1024 * 1024) else f"{max(1, round(sz / 1024))}KB"
+                updated = datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M")
+                normalized.append({
+                    "id": stem or base,
+                    "name": base,
+                    "type": typ,
+                    "size": size,
+                    "updated": updated,
+                })
         except Exception:
             pass
 
         return jsonify({"status": "ok", "project_id": project_id, "total": len(normalized), "data": normalized})
 
     return jsonify({"status": "ok", "total": len(DOCUMENTS), "data": DOCUMENTS})
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/project/documents/<doc_id>?project_id=PRJ-...
+# Removes a document's metadata (if registered) and its file(s) on disk.
+# ---------------------------------------------------------------------------
+@project_bp.route("/documents/<doc_id>", methods=["DELETE"])
+def delete_document(doc_id: str):
+    project_id = (request.args.get("project_id") or "").strip()
+    doc_id = (doc_id or "").strip()
+    if not project_id or project_id not in STORE_PROJECTS:
+        return jsonify({"status": "error", "message": "Unknown project."}), 404
+    if not doc_id:
+        return jsonify({"status": "error", "message": "Missing document id."}), 400
+
+    proj = STORE_PROJECTS.get(project_id) or {}
+    removed_meta = False
+    docs = proj.get("documents") or []
+    new_docs = [d for d in docs if str(d.get("doc_id", "")) != doc_id]
+    if len(new_docs) != len(docs):
+        proj["documents"] = new_docs
+        removed_meta = True
+
+    # Delete any BIM file(s) on disk named "<project_id>_<doc_id>.<ext>".
+    removed_files = []
+    for base_dir in (IFC_DIR, CAD_DIR):
+        if not os.path.isdir(base_dir):
+            continue
+        for path in glob.glob(os.path.join(base_dir, f"{project_id}_{doc_id}.*")):
+            try:
+                os.remove(path)
+                removed_files.append(os.path.basename(path))
+            except OSError:
+                pass
+
+    if not removed_meta and not removed_files:
+        return jsonify({"status": "error", "message": "Document not found."}), 404
+
+    if removed_meta:
+        proj.setdefault("audit_log", []).append({
+            "ts": datetime.now().isoformat(),
+            "action": "document_removed",
+            "doc_id": doc_id,
+            "user": "usr-001",
+        })
+        try:
+            store.save()
+        except Exception:
+            pass
+
+    return jsonify({
+        "status": "ok",
+        "project_id": project_id,
+        "doc_id": doc_id,
+        "removed_files": removed_files,
+    })
 
 
 # ---------------------------------------------------------------------------

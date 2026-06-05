@@ -10,6 +10,9 @@ gunicorn>=21.2.0
 # IFC upload & geometry (api/ifc_route.py)
 ifcopenshell>=0.7.0
 
+# DWG/DXF → dashboard meshes (api/cad_geometry.py)
+ezdxf>=1.3.0
+
 # Optional: Cross-origin resource sharing (app handles CORS natively without this)
 # Flask-CORS>=4.0.0
 

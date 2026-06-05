@@ -735,6 +735,7 @@ def add_document(draft_id: str):
         "category": data.get("category", "Other"),
         "size_kb":  data.get("size_kb", 0),
         "version_note": data.get("version_note", ""),
+        "bim_phase":  (data.get("bim_phase") or "").strip().lower(),
         "uploaded_at": datetime.now().isoformat(),
     }
     draft["documents"].append(doc)
@@ -835,38 +836,43 @@ def publish_project(draft_id: str):
     }
     PROJECTS[project_id] = project
 
-    # Move/rename uploaded IFC files from draft namespace to project namespace so
-    # /api/project/<project_id>/ifc-geometry can resolve them quickly.
+    # Move/rename uploaded BIM files (IFC + DWG/DXF) from draft namespace to project namespace
+    # so /api/project/<project_id>/ifc-geometry can resolve them quickly.
     try:
         base_dir = os.path.dirname(os.path.dirname(__file__))
         ifc_dir  = os.path.join(base_dir, "static", "uploads", "ifc")
-        moved = False
+        cad_dir  = os.path.join(base_dir, "static", "uploads", "cad")
 
-        # Primary match: files saved as "<draft_id>_<doc_id>.ifc"
-        for src in glob.glob(os.path.join(ifc_dir, f"{draft_id}_*.ifc")):
-            name = os.path.basename(src)
-            if not name.startswith(draft_id + "_"):
-                continue
-            suffix = name[len(draft_id) + 1:]  # everything after "<draft_id>_"
-            dest   = os.path.join(ifc_dir, f"{project_id}_{suffix}")
-            os.replace(src, dest)
-            moved = True
-
-        # Fallback match: any upload whose suffix contains this draft's doc_id.
-        if not moved:
-            for d in (draft.get("documents") or []):
-                doc_id = str(d.get("doc_id", "")).strip()
-                if not doc_id:
+        def _move_bim_uploads(upload_dir: str, draft_glob: str, doc_glob_suffix: str) -> None:
+            moved = False
+            for src in glob.glob(os.path.join(upload_dir, draft_glob)):
+                name = os.path.basename(src)
+                if not name.startswith(draft_id + "_"):
                     continue
-                hits = glob.glob(os.path.join(ifc_dir, f"*_{doc_id}.ifc"))
-                for src in hits:
-                    suffix = os.path.basename(src).split("_", 1)[1] if "_" in os.path.basename(src) else os.path.basename(src)
-                    dest = os.path.join(ifc_dir, f"{project_id}_{suffix}")
-                    if src != dest and not os.path.exists(dest):
-                        os.replace(src, dest)
-                        moved = True
+                suffix = name[len(draft_id) + 1 :]
+                dest = os.path.join(upload_dir, f"{project_id}_{suffix}")
+                os.replace(src, dest)
+                moved = True
+            if not moved:
+                for d in (draft.get("documents") or []):
+                    doc_id = str(d.get("doc_id", "")).strip()
+                    if not doc_id:
+                        continue
+                    for src in glob.glob(os.path.join(upload_dir, f"*_{doc_id}{doc_glob_suffix}")):
+                        suffix = (
+                            os.path.basename(src).split("_", 1)[1]
+                            if "_" in os.path.basename(src)
+                            else os.path.basename(src)
+                        )
+                        dest = os.path.join(upload_dir, f"{project_id}_{suffix}")
+                        if src != dest and not os.path.exists(dest):
+                            os.replace(src, dest)
+
+        _move_bim_uploads(ifc_dir, f"{draft_id}_*.ifc", ".ifc")
+        for ext in (".dwg", ".dxf"):
+            _move_bim_uploads(cad_dir, f"{draft_id}_*{ext}", ext)
     except Exception:
-        # Non-fatal: publishing should not fail because IFC rename failed.
+        # Non-fatal: publishing should not fail because BIM rename failed.
         pass
 
     # Update draft status
@@ -1325,6 +1331,7 @@ def active_add_document(project_id: str):
         "category": data.get("category", "Other"),
         "size_kb":  data.get("size_kb", 0),
         "version_note": data.get("version_note", ""),
+        "bim_phase":  (data.get("bim_phase") or "").strip().lower(),
         "uploaded_at": datetime.now().isoformat(),
     }
     proj["documents"].append(doc)

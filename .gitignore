@@ -14,3 +14,15 @@ build/
 # Large IFC under data/ — not for Git (use static/uploads/ifc/ for models you want in deploy)
 data/*.ifc
 data/**/*.ifc
+
+# BIM runtime artifacts (generated or uploaded per environment)
+data/ifc_geometry_cache/
+static/uploads/ifc/
+static/uploads/cad/
+data/BIMs/
+data/OLD house 3D models/
+data/**/*.dwg
+data/**/*.dxf
+data/**/*.rfa
+data/**/*.3ds
+data/**/*.rar

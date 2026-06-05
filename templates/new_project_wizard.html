@@ -658,8 +658,26 @@
         .doc-rec-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
         .doc-rec-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; font-size: 0.82rem; color: var(--muted); }
         .doc-rec-icon { font-size: 1rem; }
+        .doc-rec-note { font-size: 0.76rem; color: var(--muted); line-height: 1.45; margin: -0.25rem 0 0.75rem 0; padding: 0 0.15rem; }
 
         .doc-uploaded-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .stage-ifc-section { margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--border); border-radius: 10px; background: rgba(79,142,247,0.04); }
+        .stage-ifc-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem; }
+        .stage-ifc-note { font-size: 0.76rem; color: var(--muted); margin-bottom: 0.85rem; line-height: 1.45; }
+        .stage-ifc-grid { display: flex; flex-direction: column; gap: 0.65rem; }
+        .stage-ifc-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.65rem; align-items: center; }
+        .stage-ifc-label { font-size: 0.82rem; font-weight: 500; }
+        .stage-ifc-file { font-size: 0.72rem; color: var(--muted); max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .stage-ifc-btn { font-size: 0.72rem; padding: 0.35rem 0.65rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; }
+        .stage-ifc-btn:hover { border-color: var(--blue); color: var(--blue); }
+        .stage-ifc-clear { color: var(--muted); border: none; background: transparent; cursor: pointer; font-size: 0.85rem; }
+        .stage-ifc-status { grid-column: 1 / -1; font-size: 0.7rem; margin-top: -0.25rem; display: flex; align-items: center; gap: 0.35rem; }
+        .stage-ifc-status:empty { display: none; }
+        .stage-ifc-status.preparing { color: #e0a23b; }
+        .stage-ifc-status.ready { color: #3dd68c; }
+        .stage-ifc-status.error { color: #f06060; }
+        .stage-ifc-spin { width: 11px; height: 11px; border: 2px solid rgba(224,162,59,0.3); border-top-color: #e0a23b; border-radius: 50%; display: inline-block; animation: stageifcspin 0.8s linear infinite; }
+        @keyframes stageifcspin { to { transform: rotate(360deg); } }
         .doc-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; background: var(--green-dim); border: 1px solid rgba(61,214,140,0.2); border-radius: 7px; transition: background 0.2s; }
         .doc-type-badge { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; background: var(--surface2); padding: 2px 6px; border-radius: 4px; color: var(--text); }
         .doc-name { font-size: 0.82rem; flex: 1; }
@@ -1029,10 +1047,15 @@
                         <div class="doc-rec-title">Recommended Documents</div>
                         <div class="doc-rec-list" id="docRecList"><!-- JS --></div>
                         <div class="doc-upload-area" id="dropZone">
-                            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.xlsx,.png,.jpg,.ifc">
+                            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.xlsx,.png,.jpg,.ifc,.dwg,.dxf">
                             <div class="upload-icon">📎</div>
                             <div class="upload-text"><strong>Click to browse</strong> or drag and drop files here</div>
-                            <div class="upload-types">PDF · DOCX · XLSX · PNG · JPG · IFC &nbsp;|&nbsp; Max 200MB per file</div>
+                            <div class="upload-types">PDF · DOCX · XLSX · PNG · JPG · IFC · DWG · DXF &nbsp;|&nbsp; Max 200MB per file</div>
+                        </div>
+                        <div class="stage-ifc-section">
+                            <div class="stage-ifc-title">BIM model — one IFC per construction stage (optional)</div>
+                            <div class="stage-ifc-note">Export each phase from Revit/Archicad as its own IFC for accurate dashboard staging. Replaces auto height-splitting for that stage.</div>
+                            <div class="stage-ifc-grid" id="stageIfcGrid"><!-- JS --></div>
                         </div>
                         <div id="uploadedDocsList" class="doc-uploaded-list"></div>
                     </div>
