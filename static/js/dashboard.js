@@ -284,6 +284,12 @@ function updateModuleLinks() {
             ? `/dashboard?project=${encodeURIComponent(ACTIVE_PROJECT_ID)}#dashboardDocumentsCard`
             : "/dashboard#dashboardDocumentsCard";
     }
+    const navDesignStudio = document.getElementById("navLinkDesignStudio");
+    if (navDesignStudio) {
+        navDesignStudio.href = ACTIVE_PROJECT_ID
+            ? `/design-studio?project=${encodeURIComponent(ACTIVE_PROJECT_ID)}`
+            : "/design-studio";
+    }
 }
 
 /** Reload every dashboard widget (used after project switch). */
@@ -951,6 +957,8 @@ const DOC_TYPE_STYLES = {
     PDF: { bg: "#D32F2F", label: "PDF" },
     DOC: { bg: "#1976D2", label: "DOC" },
     XLS: { bg: "#388E3C", label: "XLS" },
+    IFC: { bg: "#5C6BC0", label: "IFC" },
+    DESIGN: { bg: "#4A90E2", label: "DSN" },
 };
 
 function renderDashboardDocItem(doc) {

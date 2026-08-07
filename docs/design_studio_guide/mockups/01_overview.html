@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Overview</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar">
+    <strong>Design Studio</strong>
+    <select style="background:#1c2128;border:1px solid #2d333b;color:#fff;border-radius:4px;padding:4px;font-size:11px;"><option>Vocational Center – Phase 1</option></select>
+    <input value="Academic Block Layout" style="background:#1c2128;border:1px solid #2d333b;color:#fff;border-radius:4px;padding:4px 8px;font-size:11px;width:150px;"/>
+    <span class="spacer"></span>
+    <button class="btn primary">Save</button><button class="btn">Export IFC</button><button class="btn">Speckle</button>
+    <span style="color:#4a90e2;font-size:11px;margin-left:8px;">Dashboard</span>
+  </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Template</h3><select style="width:100%;background:#1c2128;border:1px solid #2d333b;color:#fff;padding:4px;border-radius:4px;font-size:10px;"><option>Vocational / Academic</option></select></div>
+      <div class="group"><h3>Storeys</h3><div class="storey-item on">Ground Floor <span class="muted" style="float:right">4w</span></div><div class="storey-item">Level 2 <span class="muted" style="float:right">4w</span></div></div>
+      <div class="group"><h3>Draw tools</h3><div class="tools"><div class="tool on">Select / Move</div><div class="tool">Wall</div><div class="tool">Column</div><div class="tool">Door</div><div class="tool">Window</div><div class="tool">MEP run</div><div class="tool">Delete</div></div></div>
+      <div class="group"><h3>Building</h3><p class="muted">Roof: Flat · Foundation 0.6 m</p></div>
+    </aside>
+    <main class="stage">
+      <div class="tabs"><span class="on">2D Plan</span><span>3D View</span></div>
+      <div class="grid-bg"></div>
+      <div class="perimeter" style="left:12%;top:14%;width:76%;height:68%;"></div>
+      <div class="room" style="left:14%;top:16%;width:34%;height:38%;">Workshop A<br/><span class="muted">84.0 m²</span></div>
+      <div class="room" style="left:52%;top:16%;width:34%;height:38%;">Classroom Block<br/><span class="muted">96.0 m²</span></div>
+      <div class="room" style="left:14%;top:58%;width:72%;height:22%;">Corridor / Lobby<br/><span class="muted">62.0 m²</span></div>
+      <div class="callout" style="left:58%;top:52%;"><strong>Sidebar</strong>Templates, storeys, tools, and building settings</div>
+      <div class="callout" style="left:18%;top:8%;"><strong>Top bar</strong>Project, name, Save, Export, Speckle</div>
+      <div class="callout" style="left:42%;top:72%;"><strong>Canvas</strong>2D plan editor with grid snap</div>
+      <div class="legend"><div><i style="background:#c9d1d9"></i>Wall</div><div><i style="background:#4aa3ff"></i>Window</div><div><i style="background:#c08552"></i>Door</div><div style="color:#7ee0a0;margin-top:4px">3 rooms · 242.0 m²</div></div>
+      <div class="hud">Select / Move: drag walls, columns, openings, and MEP runs</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

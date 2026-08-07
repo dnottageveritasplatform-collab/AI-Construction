@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Rooms</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar"><strong>Design Studio</strong><span class="spacer"></span><button class="btn primary">Save</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Options</h3><p class="muted">Auto-detect rooms: on</p></div>
+      <div class="group"><h3>Selected room</h3>
+        <label class="muted" style="display:block;margin-bottom:2px;">Name</label>
+        <input value="Main Office" style="width:100%;background:#1c2128;border:1px solid #4a90e2;color:#fff;padding:5px;border-radius:4px;font-size:11px;margin-bottom:6px;"/>
+        <label class="muted" style="display:block;margin-bottom:2px;">Type</label>
+        <select style="width:100%;background:#1c2128;border:1px solid #2d333b;color:#fff;padding:5px;border-radius:4px;font-size:11px;"><option>Office</option></select>
+        <p class="muted" style="margin-top:6px;">120.0 m²</p>
+      </div>
+    </aside>
+    <main class="stage">
+      <div class="grid-bg"></div>
+      <div class="perimeter" style="left:12%;top:14%;width:76%;height:68%;"></div>
+      <div class="room sel" style="left:14%;top:16%;width:72%;height:64%;">Main Office · Office<br/><span class="muted">120.0 m²</span></div>
+      <div class="room" style="left:14%;top:16%;width:34%;height:38%;opacity:.4;">Storage<br/><span class="muted">48.0 m²</span></div>
+      <div class="room" style="left:52%;top:16%;width:34%;height:38%;opacity:.4;">Meeting<br/><span class="muted">52.0 m²</span></div>
+      <div class="callout" style="left:14%;top:6%;"><strong>Auto-detect</strong>Rooms appear automatically when walls form closed loops.</div>
+      <div class="callout" style="left:58%;top:48%;"><strong>Name & type</strong>Click inside a room to edit. Exported as IfcSpace in IFC.</div>
+      <div class="legend" style="color:#7ee0a0">3 rooms · 220.0 m²</div>
+      <div class="hud">Click inside a room to select · edit name and type in the sidebar</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Mockup — New Project Wizard</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+.content { flex:1; padding:20px 28px; overflow:hidden; }
+.steps { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+.step { padding:6px 12px; border-radius:20px; font-size:10px; background:#1C1C22; border:1px solid #2A2A35; color:#7A7A90; }
+.step.done { background:rgba(61,214,140,.12); border-color:#3DD68C; color:#3DD68C; }
+.step.active { background:rgba(79,142,247,.12); border-color:#4F8EF7; color:#4F8EF7; }
+.panel { background:#141418; border:1px solid #2A2A35; border-radius:10px; padding:20px; max-width:900px; }
+.panel h2 { font-size:16px; margin-bottom:6px; }
+.panel p { color:#7A7A90; font-size:12px; margin-bottom:16px; }
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.type-card { background:#1C1C22; border:2px solid #2A2A35; border-radius:8px; padding:14px 10px; text-align:center; font-size:11px; }
+.type-card.sel { border-color:#4F8EF7; background:rgba(79,142,247,.08); }
+.ai-box { margin-top:16px; padding:12px; background:rgba(79,142,247,.08); border:1px solid rgba(79,142,247,.25); border-radius:8px; font-size:11px; color:#9bb8f5; }
+.actions { margin-top:20px; display:flex; justify-content:space-between; }
+.btn { padding:8px 18px; border-radius:8px; font-size:12px; border:none; }
+.btn-back { background:#1C1C22; color:#fff; border:1px solid #2A2A35; }
+.btn-next { background:#4F8EF7; color:#fff; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="nav"><span class="brand">Veritas AI Construction Platform</span><a>New Project</a></div>
+  <div class="content">
+    <div class="steps">
+      <span class="step done">1 Type ✓</span><span class="step done">2 Details ✓</span><span class="step done">3 Zones ✓</span>
+      <span class="step active">4 Team</span><span class="step">5 Schedule</span><span class="step">6 Safety</span>
+      <span class="step">7 VR</span><span class="step">8 Documents</span><span class="step">9 Review</span><span class="step">10 Publish</span>
+    </div>
+    <div class="panel">
+      <h2>Step 4 — Assign Team Members</h2>
+      <p>Select personnel from the directory and assign roles for this project.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;">
+        <div style="padding:10px;background:#1C1C22;border-radius:8px;border:1px solid #3DD68C;">☑ D. Nottage — Lead Instructor / PM</div>
+        <div style="padding:10px;background:#1C1C22;border-radius:8px;border:1px solid #3DD68C;">☑ M. Rolle — Safety Officer</div>
+        <div style="padding:10px;background:#1C1C22;border-radius:8px;border:1px solid #2A2A35;">☐ J. Smith — Site Foreman</div>
+        <div style="padding:10px;background:#1C1C22;border-radius:8px;border:1px solid #3DD68C;">☑ 12 Students — Assigned</div>
+      </div>
+      <div class="ai-box">🤖 AI has suggested zones for Vocational / Academic — 6 monitoring zones mapped to cameras.</div>
+      <div class="actions"><button class="btn btn-back">← Back</button><button class="btn btn-next">Next: Schedule →</button></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

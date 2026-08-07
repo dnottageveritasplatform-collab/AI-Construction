@@ -13,6 +13,10 @@ ifcopenshell>=0.7.0
 # DWG/DXF → dashboard meshes (api/cad_geometry.py)
 ezdxf>=1.3.0
 
+# Speckle live BIM ingestion (api/speckle_route.py) — pull models from
+# Revit/Rhino/SketchUp/Blender/AutoCAD via the Speckle API (no file upload)
+specklepy>=2.21.0
+
 # Optional: Cross-origin resource sharing (app handles CORS natively without this)
 # Flask-CORS>=4.0.0
 

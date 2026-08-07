@@ -1,0 +1,45 @@
+/* Design Studio User Guide — shared mockup chrome */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0c; color: #e6edf3; }
+.frame { width: 1280px; height: 720px; border: 1px solid #333; border-radius: 10px; overflow: hidden; background: #0d1117; display: flex; flex-direction: column; position: relative; }
+.topbar { height: 44px; background: #161b22; border-bottom: 1px solid #2d333b; display: flex; align-items: center; padding: 0 14px; gap: 10px; font-size: 12px; flex-shrink: 0; }
+.topbar .spacer { flex: 1; }
+.btn { padding: 5px 10px; border-radius: 5px; font-size: 11px; border: 1px solid #2d333b; background: #1c2128; color: #fff; }
+.btn.primary { background: #4a90e2; border-color: #4a90e2; }
+.layout { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+.sidebar { width: 260px; background: #161b22; border-right: 1px solid #2d333b; padding: 12px; font-size: 11px; overflow: hidden; flex-shrink: 0; }
+.group { margin-bottom: 12px; }
+.group h3 { font-size: 10px; text-transform: uppercase; color: #8b949e; border-bottom: 1px solid #2d333b; padding-bottom: 4px; margin-bottom: 6px; letter-spacing: .04em; }
+.stage { flex: 1; background: #0d1117; position: relative; overflow: hidden; }
+.grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(100,160,220,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(100,160,220,.06) 1px, transparent 1px); background-size: 28px 28px; }
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.tool { padding: 6px 4px; text-align: center; background: #1c2128; border: 1px solid #2d333b; border-radius: 4px; font-size: 10px; color: #8b949e; }
+.tool.on { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+.storey-item { background: #1c2128; border: 1px solid #2d333b; border-radius: 4px; padding: 6px; margin-bottom: 4px; font-size: 10px; }
+.storey-item.on { background: #1b2a3f; border-color: #4a90e2; }
+.tabs { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(22,27,34,.92); border: 1px solid #2d333b; border-radius: 6px; overflow: hidden; z-index: 3; }
+.tabs span { padding: 5px 14px; font-size: 11px; color: #8b949e; }
+.tabs span.on { background: #4a90e2; color: #fff; }
+.callout { position: absolute; z-index: 5; background: rgba(26,58,92,.92); border: 1px solid #4a90e2; border-radius: 6px; padding: 6px 10px; font-size: 11px; max-width: 200px; line-height: 1.35; }
+.callout::before { content: ''; position: absolute; width: 8px; height: 8px; background: #4a90e2; border-radius: 50%; left: -14px; top: 10px; }
+.callout strong { color: #7ec8ff; display: block; margin-bottom: 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.legend { position: absolute; bottom: 10px; right: 10px; background: rgba(22,27,34,.9); border: 1px solid #2d333b; border-radius: 6px; padding: 8px 10px; font-size: 10px; color: #8b949e; z-index: 3; line-height: 1.6; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.muted { color: #8b949e; font-size: 10px; }
+.hud { position: absolute; bottom: 10px; left: 10px; background: rgba(22,27,34,.9); border: 1px solid #2d333b; border-radius: 6px; padding: 6px 10px; font-size: 10px; color: #8b949e; z-index: 3; max-width: 55%; }
+.phases { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; flex-wrap: wrap; z-index: 3; }
+.phases span { padding: 4px 8px; font-size: 10px; background: rgba(22,27,34,.9); border: 1px solid #2d333b; border-radius: 4px; color: #8b949e; }
+.phases span.on { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+/* Plan drawing primitives */
+.wall { position: absolute; background: #c9d1d9; transform-origin: 0 50%; height: 6px; border-radius: 1px; }
+.wall.sel { background: #ffd166; box-shadow: 0 0 0 2px rgba(255,209,102,.35); }
+.wall.pending { background: rgba(74,144,226,.75); border: 1px dashed #4a90e2; height: 4px; }
+.col { position: absolute; background: #4a90e2; border: 1px solid #0d1117; }
+.door { position: absolute; background: #c08552; height: 5px; border-radius: 1px; }
+.window { position: absolute; background: #4aa3ff; height: 5px; border-radius: 1px; }
+.room { position: absolute; background: rgba(126,224,160,.10); border: 1px dashed rgba(126,224,160,.45); font-size: 9px; color: #7ee0a0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.35; }
+.room.sel { background: rgba(126,224,160,.22); border-color: #7ee0a0; border-style: solid; }
+.mep-duct { position: absolute; background: transparent; border-top: 3px dashed #f59e0b; transform-origin: 0 50%; }
+.mep-pipe { position: absolute; background: transparent; border-top: 3px dashed #3b82f6; transform-origin: 0 50%; }
+.perimeter { position: absolute; border: 5px solid #c9d1d9; pointer-events: none; }
+.step-num { position: absolute; width: 22px; height: 22px; background: #4a90e2; color: #fff; border-radius: 50%; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; z-index: 6; }

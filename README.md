@@ -165,6 +165,79 @@ API: `GET /api/project/<project_id>/bim-geometry?phase=foundation` (and `GET ...
 
 ---
 
+### BIM: live models from Speckle (no file upload)
+
+Instead of uploading IFC/DWG files, you can pull a live design directly from
+[Speckle](https://speckle.systems) (free, open-source). Users push from
+**Revit, Rhino, SketchUp, Blender, AutoCAD, or ArchiCAD** to a Speckle project,
+and the platform converts that model into the same mesh JSON the dashboard
+already renders — no viewer changes needed.
+
+**Setup**
+
+1. `pip install specklepy`
+2. Create a Personal Access Token in Speckle (scope `streams:read`) and set
+   `SPECKLE_TOKEN` (or pass a per-project `token` to the link endpoint).
+3. Optionally set `SPECKLE_SERVER_URL` (default `https://app.speckle.systems`).
+
+**Endpoints**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/project/<project_id>/speckle/link` | Link a Speckle project/model (`speckle_project_id`, optional `model_id`/`version_id`/`server_url`/`token`) |
+| GET | `/api/project/<project_id>/speckle/link` | Read the saved link (token redacted) |
+| GET | `/api/project/<project_id>/speckle-geometry` | Pull + convert the model to dashboard geometry JSON |
+
+Geometry is cached on disk keyed by Speckle's immutable object hash, so the
+heavy pull/convert is paid only once per model version (`SPECKLE_GEOMETRY_CACHE=0`
+to disable).
+
+**Creating designs:** users author in **Blender, Revit, Rhino, SketchUp, or
+ArchiCAD** (each has a free Speckle connector) and publish to Speckle; the model
+then loads here via `/api/project/<id>/speckle-geometry`.
+
+---
+
+### Design Studio — draw building designs in-app (plan editor + IFC)
+
+Open **`/design-studio`** (also in the top nav) to *create* a building design.
+It's a **2D floor-plan editor that extrudes to 3D BIM**:
+
+- **Draw** walls, place **doors & windows** on walls, and add **columns** per
+  storey, with grid snapping (Floorplanner/SketchUp-style).
+- **Per-storey layouts** — add / duplicate / delete storeys; each floor can
+  differ. Set height, slab, foundation, and roof (flat / parapet / gable).
+- **Edit** elements (select, move via re-draw, delete) and **2D ⇄ 3D** views
+  with construction-phase filtering.
+- **Templates** seed an editable perimeter-wall plan from the 8 building types.
+
+The plan is generated server-side (`api/design_generator.py`, v2 plan model)
+into the same mesh JSON the dashboard renders.
+
+- **Save** stores the design on the project; when there's no uploaded IFC/DWG it
+  is served by `/api/project/<id>/bim-geometry`, so it shows in the dashboard.
+- **Export IFC** authors a real **IFC4** file (`api/design_ifc.py` via
+  ifcopenshell) with a full spatial hierarchy (Project → Site → Building →
+  Storeys) and typed elements (IfcWall/IfcSlab/IfcColumn/IfcWindow/IfcDoor/
+  IfcRoof/IfcFooting). It registers as the project BIM model and downloads for
+  Revit/ArchiCAD/Blender.
+- **Push to Speckle** sends the design through the Speckle integration above.
+
+**Endpoints**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/design/presets` | Building-type presets |
+| GET | `/api/design/default-spec?building_type_id=BT-03` | Editable starter plan for a type |
+| GET | `/api/project/<id>/design` | Read saved design (or starter) |
+| POST | `/api/project/<id>/design` | Save/validate a design |
+| GET/POST | `/api/project/<id>/design-geometry` | Generate geometry (dashboard JSON); POST `{spec}` for large plans |
+| POST | `/api/project/<id>/design/import-ifc` | Build an editable plan from the project's uploaded IFC |
+| POST | `/api/project/<id>/design/export-ifc` | Author an IFC4 file + register as BIM model |
+| POST | `/api/project/<id>/design/push-to-speckle` | Send the design to Speckle |
+
+---
+
 ### Step 6 — Run the application
 
 ```bash
@@ -228,6 +301,7 @@ Replace `data/mock_data.py` with live integrations:
 | Data Source | Integration Point | Technology |
 |-------------|------------------|------------|
 | BIM / 3D Model | `api/project.py` → `/api/project/bim` | Autodesk Construction Cloud API |
+| Live BIM (design tools) | `api/speckle_route.py` → `/api/project/<id>/speckle-geometry` | Speckle API (Revit/Rhino/SketchUp/Blender) |
 | Safety Alerts | `api/safety.py` → MQTT broker | AWS IoT Core / Mosquitto |
 | Task Scheduling | `api/dashboard.py` → `/api/dashboard/tasks` | MS Project / Primavera REST |
 | VR Training | `api/vr_training.py` | Moodle LMS REST API |

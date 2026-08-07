@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Save & Export</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+.flow { display:flex; gap:12px; padding:24px; align-items:stretch; justify-content:center; height:100%; }
+.card { flex:1; max-width:280px; background:#161b22; border:1px solid #2d333b; border-radius:8px; padding:16px; display:flex; flex-direction:column; }
+.card h4 { font-size:13px; color:#4a90e2; margin-bottom:8px; }
+.card p { font-size:11px; color:#8b949e; line-height:1.45; flex:1; }
+.card .icon { font-size:28px; margin-bottom:10px; }
+.arrow { align-self:center; color:#4a90e2; font-size:24px; }
+.status { margin-top:24px; text-align:center; font-size:12px; color:#3fb950; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar">
+    <strong>Design Studio</strong>
+    <select style="background:#1c2128;border:1px solid #2d333b;color:#fff;border-radius:4px;padding:4px;font-size:11px;"><option>Vocational Center – Phase 1</option></select>
+    <span class="spacer"></span>
+    <button class="btn primary">Save</button>
+    <button class="btn primary" style="background:#238636;border-color:#238636;">Export IFC</button>
+    <button class="btn">Speckle</button>
+  </div>
+  <div class="flow">
+    <div class="card"><div class="icon">1</div><h4>Save design</h4><p>Stores the plan on the active project. Appears in the Dashboard 3D viewer when no IFC file is uploaded.</p></div>
+    <div class="arrow">→</div>
+    <div class="card"><div class="icon">2</div><h4>Export IFC</h4><p>Authors a real IFC4 file with Project → Site → Building → Storeys hierarchy. Walls, slabs, columns, doors, windows, MEP, and rooms as IfcSpace.</p></div>
+    <div class="arrow">→</div>
+    <div class="card"><div class="icon">3</div><h4>Push to Speckle</h4><p>Uploads meshes to your Speckle project for team sharing and version history. Works with Revit, Blender, Rhino connectors.</p></div>
+  </div>
+  <div class="status">IFC exported (58 elements, 2 storeys, 3 rooms) — now the project BIM model</div>
+</div>
+</body>
+</html>

@@ -17,8 +17,13 @@ data/**/*.ifc
 
 # BIM runtime artifacts (generated or uploaded per environment)
 data/ifc_geometry_cache/
+data/design_geometry_cache/
+data/design_import_cache/
 static/uploads/ifc/
 static/uploads/cad/
+
+# Large intermediate video-demo artifacts (final demos live under docs/*.mp4)
+docs/video_demo/
 data/BIMs/
 data/OLD house 3D models/
 data/**/*.dwg

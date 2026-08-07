@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Doors & Windows</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar"><strong>Design Studio</strong><span class="spacer"></span><button class="btn primary">Save</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Draw tools</h3><div class="tools"><div class="tool">Select</div><div class="tool">Wall</div><div class="tool">Column</div><div class="tool on">Door</div><div class="tool">Window</div><div class="tool">MEP</div></div></div>
+      <div class="group"><h3>Opening defaults</h3><p class="muted">Width: 1.50 m · Height: 1.50 m</p><p class="muted" style="margin-top:4px">Window sill: 1.00 m</p></div>
+    </aside>
+    <main class="stage">
+      <div class="grid-bg"></div>
+      <div class="perimeter" style="left:14%;top:18%;width:72%;height:64%;"></div>
+      <div class="door" style="left:28%;top:17.5%;width:5%;"></div>
+      <div class="window" style="left:52%;top:17.5%;width:8%;"></div>
+      <div class="window" style="left:52%;top:81%;width:8%;transform:rotate(180deg);"></div>
+      <div class="door" style="left:14%;top:48%;width:5%;transform:rotate(90deg);"></div>
+      <div class="callout" style="left:34%;top:8%;"><strong>Door tool</strong>Click directly on a wall. Door is cut into the wall geometry in 3D.</div>
+      <div class="callout" style="left:62%;top:8%;"><strong>Window tool</strong>Same workflow — click on any wall segment.</div>
+      <div class="callout" style="left:8%;top:42%;"><strong>Drag to move</strong>Select tool: drag an opening along its wall.</div>
+      <div class="legend"><div><i style="background:#c08552"></i>Door</div><div><i style="background:#4aa3ff"></i>Window</div></div>
+      <div class="hud">Door / Window: click on a wall to place. Select tool to slide along wall.</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

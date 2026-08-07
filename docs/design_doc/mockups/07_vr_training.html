@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Mockup — VR Training</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+.content { flex:1; padding:16px 20px; overflow:hidden; }
+.header { margin-bottom:14px; }
+.header h2 { font-size:15px; }
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.module { padding:14px; }
+.module h4 { font-size:12px; margin-bottom:8px; }
+.bar { height:6px; background:#333; border-radius:3px; overflow:hidden; margin:8px 0; }
+.bar-fill { height:100%; background:#4CAF50; border-radius:3px; }
+.badge { display:inline-block; font-size:9px; padding:2px 8px; border-radius:10px; margin-top:6px; }
+.passed { background:rgba(76,175,80,.15); color:#4CAF50; }
+.progress { background:rgba(33,150,243,.15); color:#2196F3; }
+.pending { background:rgba(255,255,255,.08); color:#888; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="nav"><span class="brand">Veritas AI Construction Platform</span><a class="on">VR Training Hub</a></div>
+  <div class="content">
+    <div class="header"><h2>VR Training Hub</h2><p class="muted">Role-based competency modules · Vocational Center Phase 1</p></div>
+    <div class="grid">
+      <div class="card module"><h4>Site Safety Protocols</h4><div class="bar"><div class="bar-fill" style="width:100%"></div></div><span class="badge passed">Passed · Mandatory</span></div>
+      <div class="card module"><h4>Fall Protection</h4><div class="bar"><div class="bar-fill" style="width:100%"></div></div><span class="badge passed">Passed · Mandatory</span></div>
+      <div class="card module"><h4>Crane Operation</h4><div class="bar"><div class="bar-fill" style="width:65%"></div></div><span class="badge progress">In Progress · 65%</span></div>
+      <div class="card module"><h4>Steel Assembly</h4><div class="bar"><div class="bar-fill" style="width:40%"></div></div><span class="badge progress">In Progress · 40%</span></div>
+      <div class="card module"><h4>Forklift Operation</h4><div class="bar"><div class="bar-fill" style="width:0%"></div></div><span class="badge pending">Pending · Recommended</span></div>
+      <div class="card module"><h4>Infection Control VR</h4><div class="bar"><div class="bar-fill" style="width:100%"></div></div><span class="badge passed">Passed · Healthcare</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

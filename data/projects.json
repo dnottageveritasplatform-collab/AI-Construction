@@ -33961,6 +33961,1589 @@
           "user": "usr-001"
         }
       ]
+    },
+    "DRF-88DBDE8F": {
+      "draft_id": "DRF-88DBDE8F",
+      "created_at": "2026-05-22T10:09:13.145981",
+      "updated_at": "2026-05-22T10:10:49.425945",
+      "step": 8,
+      "status": "published",
+      "building": {
+        "building_type_id": "BT-02",
+        "name": "Multi-Family / Apartment",
+        "category": "Residential"
+      },
+      "details": {
+        "project_name": "Johnson Family home 4",
+        "client_org": "BTVI",
+        "site_address": "Sandilands Village Rd",
+        "start_date": "2026-05-29",
+        "end_date": "2026-08-22",
+        "budget": 750000.0,
+        "budget_spent": 0.0,
+        "currency": "BSD$",
+        "description": "",
+        "logo_url": null,
+        "duration_days": 85,
+        "duration_months": 2.8
+      },
+      "zones": [
+        {
+          "id": "Z1",
+          "name": "Foundation",
+          "camera": "CAM-01"
+        },
+        {
+          "id": "Z2",
+          "name": "Material Bay",
+          "camera": "CAM-02"
+        },
+        {
+          "id": "Z3",
+          "name": "West Wing",
+          "camera": "CAM-03"
+        },
+        {
+          "id": "Z4",
+          "name": "East Wing",
+          "camera": "CAM-04"
+        },
+        {
+          "id": "Z5",
+          "name": "Crane Exclusion Zone",
+          "camera": "CAM-05"
+        }
+      ],
+      "team": {
+        "members": [
+          {
+            "avatar": "/static/assets/passportphotodominicnottage.jpg",
+            "email": "dnottage@btvi.edu.bs",
+            "id": "USR-001",
+            "name": "D. Nottage",
+            "role": "Instructor / PM"
+          },
+          {
+            "avatar": null,
+            "email": "jsmith@btvi.edu.bs",
+            "id": "USR-002",
+            "name": "J. Smith",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "ajohnson@btvi.edu.bs",
+            "id": "USR-003",
+            "name": "A. Johnson",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "slee@btvi.edu.bs",
+            "id": "USR-005",
+            "name": "S. Lee",
+            "role": "Safety Officer"
+          },
+          {
+            "avatar": null,
+            "email": "mwilliams@btvi.edu.bs",
+            "id": "USR-004",
+            "name": "M. Williams",
+            "role": "Student"
+          }
+        ],
+        "role_counts": {
+          "Instructor / PM": 1,
+          "Student": 3,
+          "Safety Officer": 1
+        },
+        "gaps": []
+      },
+      "gantt": {
+        "tasks": [
+          {
+            "dep_lag_wd": [],
+            "deps": [],
+            "duration": 5,
+            "duration_wd": 5,
+            "end_date": "2026-06-04",
+            "id": "TASK-001",
+            "name": "Site Preparation & Piling",
+            "pct_complete": 0,
+            "resource_pool": "crew_earth",
+            "start_date": "2026-05-29",
+            "start_offset_pct": 0,
+            "status": "scheduled",
+            "width_pct": 8.2
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-001"
+            ],
+            "duration": 6,
+            "duration_wd": 6,
+            "end_date": "2026-06-12",
+            "id": "TASK-002",
+            "name": "Foundation & Ground Slab",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-06-05",
+            "start_offset_pct": 8.2,
+            "status": "scheduled",
+            "width_pct": 9.4
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-002"
+            ],
+            "duration": 13,
+            "duration_wd": 13,
+            "end_date": "2026-07-01",
+            "id": "TASK-003",
+            "name": "Structural Steel Erection",
+            "pct_complete": 0,
+            "resource_pool": "crew_structure",
+            "start_date": "2026-06-15",
+            "start_offset_pct": 20,
+            "status": "scheduled",
+            "width_pct": 20
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 8,
+            "duration_wd": 8,
+            "end_date": "2026-07-13",
+            "id": "TASK-004",
+            "name": "Concrete Floor Slabs",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-07-02",
+            "start_offset_pct": 40,
+            "status": "scheduled",
+            "width_pct": 14.1
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 10,
+            "duration_wd": 10,
+            "end_date": "2026-07-27",
+            "id": "TASK-005",
+            "name": "MEP Rough-In",
+            "pct_complete": 0,
+            "resource_pool": "crew_mep",
+            "start_date": "2026-07-14",
+            "start_offset_pct": 54.1,
+            "status": "scheduled",
+            "width_pct": 16.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 8,
+            "duration_wd": 8,
+            "end_date": "2026-07-23",
+            "id": "TASK-006",
+            "name": "Facade & Cladding",
+            "pct_complete": 0,
+            "resource_pool": "crew_envelope",
+            "start_date": "2026-07-14",
+            "start_offset_pct": 54.1,
+            "status": "scheduled",
+            "width_pct": 11.8
+          },
+          {
+            "dep_lag_wd": [
+              0,
+              0
+            ],
+            "deps": [
+              "TASK-005",
+              "TASK-006"
+            ],
+            "duration": 8,
+            "duration_wd": 8,
+            "end_date": "2026-08-06",
+            "id": "TASK-007",
+            "name": "Interior Fit-Out",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2026-07-28",
+            "start_offset_pct": 70.6,
+            "status": "scheduled",
+            "width_pct": 11.8
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-007"
+            ],
+            "duration": 6,
+            "duration_wd": 6,
+            "end_date": "2026-08-14",
+            "id": "TASK-008",
+            "name": "Inspections & Commissioning",
+            "pct_complete": 0,
+            "resource_pool": "crew_closeout",
+            "start_date": "2026-08-07",
+            "start_offset_pct": 82.4,
+            "status": "scheduled",
+            "width_pct": 9.4
+          }
+        ],
+        "locked_at": "2026-05-22T10:10:15.914277"
+      },
+      "safety": {
+        "rules": [
+          {
+            "code": "OSHA 1926.502",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fall protection required above 1.8m. Full harness mandatory above Level 2.",
+            "zone_names": [
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "OSHA 1926.1416",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Crane exclusion zone of 15m radius must be maintained during lifts.",
+            "zone_names": [
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z5"
+            ]
+          },
+          {
+            "code": "OSHA 1926.150",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fire suppression equipment at all floor levels.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "BTVI-SC-2024-01",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing",
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4",
+              "Z5"
+            ]
+          }
+        ],
+        "confirmed_at": "2026-05-22T10:10:18.265513"
+      },
+      "vr": {
+        "matrix": [
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "D. Nottage",
+            "role": "Instructor / PM",
+            "user_id": "USR-001"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "J. Smith",
+            "role": "Student",
+            "user_id": "USR-002"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "A. Johnson",
+            "role": "Student",
+            "user_id": "USR-003"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "S. Lee",
+            "role": "Safety Officer",
+            "user_id": "USR-005"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "M. Williams",
+            "role": "Student",
+            "user_id": "USR-004"
+          }
+        ],
+        "compliance_deadline": "2026-05-15",
+        "confirmed_at": "2026-05-22T10:10:20.697371"
+      },
+      "documents": [],
+      "audit_log": [
+        {
+          "ts": "2026-05-22T10:09:13.145989",
+          "action": "draft_created",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:09:22.203474",
+          "action": "building_type_selected",
+          "value": "BT-02",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:09:59.210528",
+          "action": "project_details_saved",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:10:01.913094",
+          "action": "zones_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:10:11.704765",
+          "action": "team_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:10:15.914290",
+          "action": "gantt_accepted",
+          "tasks": 8,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:10:18.265525",
+          "action": "safety_protocols_confirmed",
+          "rules": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T10:10:20.697381",
+          "action": "vr_assignments_confirmed",
+          "members": 5,
+          "user": "usr-001"
+        }
+      ]
+    },
+    "DRF-7B4271F7": {
+      "draft_id": "DRF-7B4271F7",
+      "created_at": "2026-05-26T10:30:32.057572",
+      "updated_at": "2026-05-26T10:32:54.437121",
+      "step": 8,
+      "status": "published",
+      "building": {
+        "building_type_id": "BT-02",
+        "name": "Multi-Family / Apartment",
+        "category": "Residential"
+      },
+      "details": {
+        "project_name": "Johnson Family home 4",
+        "client_org": "BTVI",
+        "site_address": "Sandilands Village Rd",
+        "start_date": "2026-05-29",
+        "end_date": "2026-09-30",
+        "budget": 750000.0,
+        "budget_spent": 0.0,
+        "currency": "BSD$",
+        "description": "",
+        "logo_url": null,
+        "duration_days": 124,
+        "duration_months": 4.1
+      },
+      "zones": [
+        {
+          "id": "Z1",
+          "name": "Foundation",
+          "camera": "CAM-01"
+        },
+        {
+          "id": "Z2",
+          "name": "Material Bay",
+          "camera": "CAM-02"
+        },
+        {
+          "id": "Z3",
+          "name": "West Wing",
+          "camera": "CAM-03"
+        },
+        {
+          "id": "Z4",
+          "name": "East Wing",
+          "camera": "CAM-04"
+        },
+        {
+          "id": "Z5",
+          "name": "Crane Exclusion Zone",
+          "camera": "CAM-05"
+        }
+      ],
+      "team": {
+        "members": [
+          {
+            "avatar": "/static/assets/passportphotodominicnottage.jpg",
+            "email": "dnottage@btvi.edu.bs",
+            "id": "USR-001",
+            "name": "D. Nottage",
+            "role": "Instructor / PM"
+          },
+          {
+            "avatar": null,
+            "email": "jsmith@btvi.edu.bs",
+            "id": "USR-002",
+            "name": "J. Smith",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "ajohnson@btvi.edu.bs",
+            "id": "USR-003",
+            "name": "A. Johnson",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "mwilliams@btvi.edu.bs",
+            "id": "USR-004",
+            "name": "M. Williams",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "slee@btvi.edu.bs",
+            "id": "USR-005",
+            "name": "S. Lee",
+            "role": "Safety Officer"
+          }
+        ],
+        "role_counts": {
+          "Instructor / PM": 1,
+          "Student": 3,
+          "Safety Officer": 1
+        },
+        "gaps": []
+      },
+      "gantt": {
+        "tasks": [
+          {
+            "dep_lag_wd": [],
+            "deps": [],
+            "duration": 7,
+            "duration_wd": 7,
+            "end_date": "2026-06-08",
+            "id": "TASK-001",
+            "name": "Site Preparation & Piling",
+            "pct_complete": 0,
+            "resource_pool": "crew_earth",
+            "start_date": "2026-05-29",
+            "start_offset_pct": 0,
+            "status": "scheduled",
+            "width_pct": 8.9
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-001"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2026-06-19",
+            "id": "TASK-002",
+            "name": "Foundation & Ground Slab",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-06-09",
+            "start_offset_pct": 8.9,
+            "status": "scheduled",
+            "width_pct": 8.9
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-002"
+            ],
+            "duration": 19,
+            "duration_wd": 19,
+            "end_date": "2026-07-16",
+            "id": "TASK-003",
+            "name": "Structural Steel Erection",
+            "pct_complete": 0,
+            "resource_pool": "crew_structure",
+            "start_date": "2026-06-22",
+            "start_offset_pct": 19.4,
+            "status": "scheduled",
+            "width_pct": 20.2
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 11,
+            "duration_wd": 11,
+            "end_date": "2026-07-31",
+            "id": "TASK-004",
+            "name": "Concrete Floor Slabs",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-07-17",
+            "start_offset_pct": 39.5,
+            "status": "scheduled",
+            "width_pct": 12.1
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 14,
+            "duration_wd": 14,
+            "end_date": "2026-08-20",
+            "id": "TASK-005",
+            "name": "MEP Rough-In",
+            "pct_complete": 0,
+            "resource_pool": "crew_mep",
+            "start_date": "2026-08-03",
+            "start_offset_pct": 53.2,
+            "status": "scheduled",
+            "width_pct": 14.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 11,
+            "duration_wd": 11,
+            "end_date": "2026-08-17",
+            "id": "TASK-006",
+            "name": "Facade & Cladding",
+            "pct_complete": 0,
+            "resource_pool": "crew_envelope",
+            "start_date": "2026-08-03",
+            "start_offset_pct": 53.2,
+            "status": "scheduled",
+            "width_pct": 12.1
+          },
+          {
+            "dep_lag_wd": [
+              0,
+              0
+            ],
+            "deps": [
+              "TASK-005",
+              "TASK-006"
+            ],
+            "duration": 12,
+            "duration_wd": 12,
+            "end_date": "2026-09-07",
+            "id": "TASK-007",
+            "name": "Interior Fit-Out",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2026-08-21",
+            "start_offset_pct": 67.7,
+            "status": "scheduled",
+            "width_pct": 14.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-007"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2026-09-18",
+            "id": "TASK-008",
+            "name": "Inspections & Commissioning",
+            "pct_complete": 0,
+            "resource_pool": "crew_closeout",
+            "start_date": "2026-09-08",
+            "start_offset_pct": 82.3,
+            "status": "scheduled",
+            "width_pct": 8.9
+          }
+        ],
+        "locked_at": "2026-05-26T10:31:21.228058"
+      },
+      "safety": {
+        "rules": [
+          {
+            "code": "OSHA 1926.502",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fall protection required above 1.8m. Full harness mandatory above Level 2.",
+            "zone_names": [
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "OSHA 1926.1416",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Crane exclusion zone of 15m radius must be maintained during lifts.",
+            "zone_names": [
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z5"
+            ]
+          },
+          {
+            "code": "OSHA 1926.150",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fire suppression equipment at all floor levels.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "BTVI-SC-2024-01",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing",
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4",
+              "Z5"
+            ]
+          }
+        ],
+        "confirmed_at": "2026-05-26T10:31:36.346505"
+      },
+      "vr": {
+        "matrix": [
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "D. Nottage",
+            "role": "Instructor / PM",
+            "user_id": "USR-001"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "J. Smith",
+            "role": "Student",
+            "user_id": "USR-002"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "A. Johnson",
+            "role": "Student",
+            "user_id": "USR-003"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "M. Williams",
+            "role": "Student",
+            "user_id": "USR-004"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "S. Lee",
+            "role": "Safety Officer",
+            "user_id": "USR-005"
+          }
+        ],
+        "compliance_deadline": "2026-05-15",
+        "confirmed_at": "2026-05-26T10:31:41.435951"
+      },
+      "documents": [],
+      "audit_log": [
+        {
+          "ts": "2026-05-26T10:30:32.057583",
+          "action": "draft_created",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:30:35.250314",
+          "action": "building_type_selected",
+          "value": "BT-02",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:00.841785",
+          "action": "project_details_saved",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:03.421481",
+          "action": "zones_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:08.314241",
+          "action": "zones_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:16.955501",
+          "action": "team_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:21.228075",
+          "action": "gantt_accepted",
+          "tasks": 8,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:36.346519",
+          "action": "safety_protocols_confirmed",
+          "rules": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:41.435970",
+          "action": "vr_assignments_confirmed",
+          "members": 5,
+          "user": "usr-001"
+        }
+      ]
+    },
+    "DRF-E278A98F": {
+      "draft_id": "DRF-E278A98F",
+      "created_at": "2026-06-05T11:35:24.483122",
+      "updated_at": "2026-06-05T11:35:24.483128",
+      "step": 1,
+      "status": "draft",
+      "building": null,
+      "details": null,
+      "zones": null,
+      "team": null,
+      "gantt": null,
+      "safety": null,
+      "vr": null,
+      "documents": [],
+      "audit_log": [
+        {
+          "ts": "2026-06-05T11:35:24.483130",
+          "action": "draft_created",
+          "user": "usr-001"
+        }
+      ]
+    },
+    "DRF-AD609CAF": {
+      "draft_id": "DRF-AD609CAF",
+      "created_at": "2026-07-30T11:19:14.739703",
+      "updated_at": "2026-07-30T11:19:14.739722",
+      "step": 1,
+      "status": "draft",
+      "building": null,
+      "details": null,
+      "zones": null,
+      "team": null,
+      "gantt": null,
+      "safety": null,
+      "vr": null,
+      "documents": [],
+      "audit_log": [
+        {
+          "ts": "2026-07-30T11:19:14.739731",
+          "action": "draft_created",
+          "user": "usr-001"
+        }
+      ]
+    },
+    "DRF-9CBDA314": {
+      "draft_id": "DRF-9CBDA314",
+      "created_at": "2026-07-30T11:31:50.432713",
+      "updated_at": "2026-07-30T11:37:30.438602",
+      "step": 8,
+      "status": "published",
+      "building": {
+        "building_type_id": "BT-01",
+        "name": "Single-Family Residence",
+        "category": "Residential"
+      },
+      "details": {
+        "project_name": "Johnson Family home 123",
+        "client_org": "BTVI",
+        "site_address": "Sandilands Village Rd 65",
+        "start_date": "2026-08-05",
+        "end_date": "2026-12-31",
+        "budget": 500000.0,
+        "budget_spent": 0.0,
+        "currency": "BSD$",
+        "description": "",
+        "logo_url": null,
+        "duration_days": 148,
+        "duration_months": 4.9
+      },
+      "zones": [
+        {
+          "id": "Z1",
+          "name": "Foundation",
+          "camera": "CAM-01"
+        },
+        {
+          "id": "Z2",
+          "name": "Framing Bay",
+          "camera": "CAM-02"
+        },
+        {
+          "id": "Z3",
+          "name": "Material Storage",
+          "camera": "CAM-03"
+        },
+        {
+          "id": "Z4",
+          "name": "Car Park",
+          "camera": "CAM-04"
+        }
+      ],
+      "team": {
+        "members": [
+          {
+            "avatar": "/static/assets/passportphotodominicnottage.jpg",
+            "email": "dnottage@btvi.edu.bs",
+            "id": "USR-001",
+            "name": "D. Nottage",
+            "role": "Instructor / PM"
+          },
+          {
+            "avatar": null,
+            "email": "jsmith@btvi.edu.bs",
+            "id": "USR-002",
+            "name": "J. Smith",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "ajohnson@btvi.edu.bs",
+            "id": "USR-003",
+            "name": "A. Johnson",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "slee@btvi.edu.bs",
+            "id": "USR-005",
+            "name": "S. Lee",
+            "role": "Safety Officer"
+          }
+        ],
+        "role_counts": {
+          "Instructor / PM": 1,
+          "Student": 2,
+          "Safety Officer": 1
+        },
+        "gaps": []
+      },
+      "gantt": {
+        "tasks": [
+          {
+            "dep_lag_wd": [],
+            "deps": [],
+            "duration": 14,
+            "duration_wd": 14,
+            "end_date": "2026-08-24",
+            "id": "TASK-001",
+            "name": "Site Preparation & Excavation",
+            "pct_complete": 0,
+            "resource_pool": "crew_earth",
+            "start_date": "2026-08-05",
+            "start_offset_pct": 0,
+            "status": "scheduled",
+            "width_pct": 13.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-001"
+            ],
+            "duration": 21,
+            "duration_wd": 21,
+            "end_date": "2026-09-22",
+            "id": "TASK-002",
+            "name": "Foundation Pouring",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-08-25",
+            "start_offset_pct": 13.5,
+            "status": "scheduled",
+            "width_pct": 19.6
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-002"
+            ],
+            "duration": 36,
+            "duration_wd": 36,
+            "end_date": "2026-11-11",
+            "id": "TASK-003",
+            "name": "Wood Frame Erection",
+            "pct_complete": 0,
+            "resource_pool": "crew_structure",
+            "start_date": "2026-09-23",
+            "start_offset_pct": 33.1,
+            "status": "scheduled",
+            "width_pct": 33.8
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 27,
+            "duration_wd": 27,
+            "end_date": "2026-12-18",
+            "id": "TASK-004",
+            "name": "Roofing Installation",
+            "pct_complete": 0,
+            "resource_pool": "crew_roof",
+            "start_date": "2026-11-12",
+            "start_offset_pct": 66.9,
+            "status": "scheduled",
+            "width_pct": 25
+          },
+          {
+            "dep_lag_wd": [
+              1
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 32,
+            "duration_wd": 32,
+            "end_date": "2026-12-28",
+            "id": "TASK-005",
+            "name": "MEP Rough-In",
+            "pct_complete": 0,
+            "resource_pool": "crew_mep",
+            "start_date": "2026-11-13",
+            "start_offset_pct": 67.6,
+            "status": "scheduled",
+            "width_pct": 31.1
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-005"
+            ],
+            "duration": 21,
+            "duration_wd": 21,
+            "end_date": "2027-01-26",
+            "id": "TASK-006",
+            "name": "Insulation & Drywall",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2026-12-29",
+            "start_offset_pct": 98.6,
+            "status": "scheduled",
+            "width_pct": 19.6
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-006"
+            ],
+            "duration": 18,
+            "duration_wd": 18,
+            "end_date": "2027-02-19",
+            "id": "TASK-007",
+            "name": "Interior Fit-Out",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2027-01-27",
+            "start_offset_pct": 100,
+            "status": "scheduled",
+            "width_pct": 16.2
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-007"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2027-03-04",
+            "id": "TASK-008",
+            "name": "Final Inspection & Handover",
+            "pct_complete": 0,
+            "resource_pool": "crew_closeout",
+            "start_date": "2027-02-22",
+            "start_offset_pct": 100,
+            "status": "scheduled",
+            "width_pct": 7.4
+          }
+        ],
+        "locked_at": "2026-07-30T11:35:31.688823"
+      },
+      "safety": {
+        "rules": [
+          {
+            "code": "OSHA 1926.502",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fall protection required above 1.8m on any open surface.",
+            "zone_names": [
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z2",
+              "Z3"
+            ]
+          },
+          {
+            "code": "OSHA 1926.150",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fire extinguisher required within 30m of all active work areas.",
+            "zone_names": [
+              "Foundation",
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3"
+            ]
+          },
+          {
+            "code": "BTVI-SC-2024-01",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
+            "zone_names": [
+              "Foundation",
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3"
+            ]
+          }
+        ],
+        "confirmed_at": "2026-07-30T11:36:52.679022"
+      },
+      "vr": {
+        "matrix": [
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "D. Nottage",
+            "role": "Instructor / PM",
+            "user_id": "USR-001"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "J. Smith",
+            "role": "Student",
+            "user_id": "USR-002"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "A. Johnson",
+            "role": "Student",
+            "user_id": "USR-003"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "S. Lee",
+            "role": "Safety Officer",
+            "user_id": "USR-005"
+          }
+        ],
+        "compliance_deadline": "2026-07-22",
+        "confirmed_at": "2026-07-30T11:37:14.016238"
+      },
+      "documents": [],
+      "audit_log": [
+        {
+          "ts": "2026-07-30T11:31:50.432724",
+          "action": "draft_created",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:32:09.176189",
+          "action": "building_type_selected",
+          "value": "BT-01",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:32:44.536819",
+          "action": "project_details_saved",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:33:34.872234",
+          "action": "zones_saved",
+          "count": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:34:04.759757",
+          "action": "team_saved",
+          "count": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:35:31.688839",
+          "action": "gantt_accepted",
+          "tasks": 8,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:36:52.679033",
+          "action": "safety_protocols_confirmed",
+          "rules": 3,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:37:14.016248",
+          "action": "vr_assignments_confirmed",
+          "members": 4,
+          "user": "usr-001"
+        }
+      ]
     }
   },
   "projects": {
@@ -33970,17 +35553,18 @@
       "status": "active",
       "published_at": "2026-02-25T12:04:36.066103",
       "building": {
-        "building_type_id": "BT-07",
-        "name": "Retail / Mixed-Use",
-        "category": "Commercial"
+        "building_type_id": "BT-02",
+        "name": "Multi-Family / Apartment",
+        "category": "Residential"
       },
       "details": {
-        "project_name": "Radio Shack 4",
+        "project_name": "Hotel Example 4",
         "client_org": "BTVI",
         "site_address": "ssfdgsdfgg",
         "start_date": "2026-02-24",
         "end_date": "2026-07-24",
         "budget": 275000.0,
+        "budget_spent": 1500.0,
         "currency": "BSD$",
         "description": "sfdgdfgsd",
         "logo_url": null,
@@ -34035,72 +35619,79 @@
       "gantt": {
         "tasks": [
           {
+            "cost": 1500,
             "deps": [],
+            "desc": "Project schedule (CPM): Site Preparation.",
             "duration": 7,
-            "end_date": "2026-03-03",
+            "duration_wd": 7,
+            "end_date": "2026-03-05",
             "id": "TASK-001",
             "name": "Site Preparation",
             "pct_complete": 100,
-            "start_date": "2026-02-24",
-            "start_offset_pct": 0,
+            "start_date": "2026-02-25",
+            "start_offset_pct": 0.7,
             "status": "completed",
-            "width_pct": 4.7
+            "width_pct": 6
           },
           {
             "deps": [
               "TASK-001"
             ],
             "duration": 10,
-            "end_date": "2026-03-13",
+            "duration_wd": 10,
+            "end_date": "2026-03-19",
             "id": "TASK-002",
             "name": "Foundation",
             "pct_complete": 0,
-            "start_date": "2026-03-03",
-            "start_offset_pct": 4.7,
-            "status": "scheduled",
-            "width_pct": 6.7
+            "start_date": "2026-03-06",
+            "start_offset_pct": 6.7,
+            "status": "review",
+            "width_pct": 9.3
           },
           {
             "deps": [
               "TASK-002"
             ],
             "duration": 21,
-            "end_date": "2026-04-03",
+            "duration_wd": 21,
+            "end_date": "2026-04-17",
             "id": "TASK-003",
             "name": "Structural Frame",
-            "pct_complete": 0,
-            "start_date": "2026-03-13",
-            "start_offset_pct": 11.3,
-            "status": "scheduled",
-            "width_pct": 14
+            "pct_complete": 100,
+            "start_date": "2026-03-20",
+            "start_offset_pct": 16,
+            "status": "completed",
+            "width_pct": 19.3
           },
           {
             "deps": [
               "TASK-003"
             ],
             "duration": 16,
-            "end_date": "2026-04-19",
+            "duration_wd": 16,
+            "end_date": "2026-05-11",
             "id": "TASK-004",
             "name": "Facade & Shopfront",
-            "pct_complete": 0,
-            "start_date": "2026-04-03",
-            "start_offset_pct": 25.3,
-            "status": "scheduled",
-            "width_pct": 10.7
+            "pct_complete": 100,
+            "start_date": "2026-04-20",
+            "start_offset_pct": 36.7,
+            "status": "completed",
+            "width_pct": 14.7
           },
           {
             "deps": [
               "TASK-003"
             ],
             "duration": 19,
-            "end_date": "2026-04-22",
+            "end_date": "2026-05-14",
             "id": "TASK-005",
             "name": "MEP Rough-In",
             "pct_complete": 100,
-            "start_date": "2026-04-03",
-            "start_offset_pct": 25.3,
+            "start_date": "2026-04-20",
+            "start_offset_pct": 36.7,
             "status": "completed",
-            "width_pct": 12.7
+            "width_pct": 16.7,
+            "duration_wd": 19
           },
           {
             "deps": [
@@ -34108,28 +35699,30 @@
               "TASK-005"
             ],
             "duration": 16,
-            "end_date": "2026-05-08",
+            "duration_wd": 16,
+            "end_date": "2026-06-05",
             "id": "TASK-006",
             "name": "Retail Interior Fit-Out",
             "pct_complete": 0,
-            "start_date": "2026-04-22",
-            "start_offset_pct": 38,
-            "status": "scheduled",
-            "width_pct": 10.7
+            "start_date": "2026-05-15",
+            "start_offset_pct": 53.3,
+            "status": "in_progress",
+            "width_pct": 14.7
           },
           {
             "deps": [
               "TASK-005"
             ],
             "duration": 10,
-            "end_date": "2026-05-02",
+            "duration_wd": 10,
+            "end_date": "2026-06-19",
             "id": "TASK-007",
             "name": "Residential / Office Fit-Out",
             "pct_complete": 0,
-            "start_date": "2026-04-22",
-            "start_offset_pct": 38,
-            "status": "scheduled",
-            "width_pct": 6.7
+            "start_date": "2026-06-08",
+            "start_offset_pct": 69.3,
+            "status": "review",
+            "width_pct": 8
           },
           {
             "deps": [
@@ -34137,17 +35730,18 @@
               "TASK-007"
             ],
             "duration": 5,
-            "end_date": "2026-05-13",
+            "end_date": "2026-06-26",
             "id": "TASK-008",
             "name": "Handover",
             "pct_complete": 0,
-            "start_date": "2026-05-08",
-            "start_offset_pct": 48.7,
+            "start_date": "2026-06-22",
+            "start_offset_pct": 78.7,
             "status": "scheduled",
-            "width_pct": 3.3
+            "width_pct": 3.3,
+            "duration_wd": 5
           }
         ],
-        "locked_at": "2026-02-25T12:03:44.338356"
+        "locked_at": "2026-07-30T11:21:44.267825"
       },
       "safety": {
         "rules": [
@@ -34196,7 +35790,7 @@
             ]
           }
         ],
-        "confirmed_at": "2026-02-25T12:03:46.049926"
+        "confirmed_at": "2026-05-22T10:56:41.516114"
       },
       "vr": {
         "matrix": [
@@ -34264,7 +35858,7 @@
           }
         ],
         "compliance_deadline": "2026-02-13",
-        "confirmed_at": "2026-02-25T12:03:59.754277"
+        "confirmed_at": "2026-05-22T10:56:42.930165"
       },
       "documents": [
         {
@@ -34275,9 +35869,69 @@
           "size_kb": 51,
           "version_note": "",
           "uploaded_at": "2026-02-25T12:04:05.612095"
+        },
+        {
+          "doc_id": "DOC-ASHWYF",
+          "name": "Snowdon_All_Stages.ifc",
+          "type": "IFC",
+          "category": "BIM Model",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "",
+          "uploaded_at": "2026-06-03T14:17:19.201329"
+        },
+        {
+          "doc_id": "DOC-KMDX4R",
+          "name": "Snowdon_Foundation.ifc",
+          "type": "IFC",
+          "category": "BIM \u2014 Foundation",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "foundation",
+          "uploaded_at": "2026-06-03T14:17:35.756652"
+        },
+        {
+          "doc_id": "DOC-5J58PW",
+          "name": "Snowdon_Structural.ifc",
+          "type": "IFC",
+          "category": "BIM \u2014 Structural Frame",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "structure",
+          "uploaded_at": "2026-06-03T14:17:48.171244"
+        },
+        {
+          "doc_id": "DOC-E0HPRM",
+          "name": "Snowdon_MEP.ifc",
+          "type": "IFC",
+          "category": "BIM \u2014 MEP Systems",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "mep",
+          "uploaded_at": "2026-06-03T14:17:58.858057"
+        },
+        {
+          "doc_id": "DOC-P76WBM",
+          "name": "Snowdon_Cladding.ifc",
+          "type": "IFC",
+          "category": "BIM \u2014 Cladding & Fa\u00e7ade",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "cladding",
+          "uploaded_at": "2026-06-03T14:18:17.123269"
+        },
+        {
+          "doc_id": "DOC-87RRIA",
+          "name": "Snowdon_Interior.ifc",
+          "type": "IFC",
+          "category": "BIM \u2014 Interior Finishing",
+          "size_kb": 1,
+          "version_note": "",
+          "bim_phase": "finishing",
+          "uploaded_at": "2026-06-03T14:18:28.889347"
         }
       ],
-      "progress_pct": 25,
+      "progress_pct": 50,
       "audit_log": [
         {
           "ts": "2026-02-25T12:03:02.280970",
@@ -34377,732 +36031,386 @@
           "ts": "2026-02-25T12:04:36.066109",
           "action": "project_published",
           "user": "usr-001"
-        }
-      ],
-      "budget_total": 275000.0,
-      "budget_spent": 0.0
-    },
-    "PRJ-2F7F3C06": {
-      "project_id": "PRJ-2F7F3C06",
-      "draft_id": "DRF-FC6707EA",
-      "status": "active",
-      "published_at": "2026-03-30T13:39:17.038933",
-      "building": {
-        "building_type_id": "BT-03",
-        "name": "Vocational / Academic",
-        "category": "Educational"
-      },
-      "details": {
-        "project_name": "Johnson 4 Bedroom Home",
-        "client_org": "BTVI",
-        "site_address": "ssfdgsdfgg",
-        "start_date": "2026-02-24",
-        "end_date": "2026-07-24",
-        "budget": 275000.0,
-        "budget_spent": 0.0,
-        "currency": "BSD$",
-        "description": "",
-        "logo_url": null,
-        "duration_days": 150,
-        "duration_months": 4.9
-      },
-      "zones": [
-        {
-          "id": "Z1",
-          "name": "Foundation",
-          "camera": "CAM-01"
         },
         {
-          "id": "Z2",
-          "name": "Material Bay",
-          "camera": "CAM-02"
-        },
-        {
-          "id": "Z3",
-          "name": "West Wing",
-          "camera": "CAM-03"
-        },
-        {
-          "id": "Z4",
-          "name": "East Wing",
-          "camera": "CAM-04"
-        }
-      ],
-      "team": {
-        "members": [
-          {
-            "avatar": "/static/assets/passportphotodominicnottage.jpg",
-            "email": "dnottage@btvi.edu.bs",
-            "id": "USR-001",
-            "name": "D. Nottage",
-            "role": "Instructor / PM"
-          },
-          {
-            "avatar": null,
-            "email": "slee@btvi.edu.bs",
-            "id": "USR-005",
-            "name": "S. Lee",
-            "role": "Safety Officer"
-          },
-          {
-            "avatar": null,
-            "email": "ajohnson@btvi.edu.bs",
-            "id": "USR-003",
-            "name": "A. Johnson",
-            "role": "Student"
-          },
-          {
-            "avatar": null,
-            "email": "mwilliams@btvi.edu.bs",
-            "id": "USR-004",
-            "name": "M. Williams",
-            "role": "Student"
-          }
-        ],
-        "role_counts": {
-          "Instructor / PM": 1,
-          "Safety Officer": 1,
-          "Student": 2
-        },
-        "gaps": []
-      },
-      "gantt": {
-        "tasks": [
-          {
-            "cost": 2500,
-            "dep_lag_wd": [],
-            "deps": [],
-            "desc": "Project schedule (CPM): Site Preparation.",
-            "duration": 8,
-            "duration_wd": 8,
-            "end_date": "2026-03-05",
-            "id": "TASK-001",
-            "inspection_date": "2026-04-21",
-            "inspection_required": true,
-            "name": "Site Preparation",
-            "pct_complete": 99,
-            "start_date": "2026-02-24",
-            "start_offset_pct": 0,
-            "status": "review",
-            "width_pct": 6.7
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-001"
-            ],
-            "duration": 13,
-            "duration_wd": 13,
-            "end_date": "2026-03-25",
-            "id": "TASK-002",
-            "name": "Foundation Pouring",
-            "pct_complete": 100,
-            "start_date": "2026-03-09",
-            "start_offset_pct": 8.7,
-            "status": "review",
-            "width_pct": 11.3
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-002"
-            ],
-            "duration": 21,
-            "duration_wd": 21,
-            "end_date": "2026-04-23",
-            "id": "TASK-003",
-            "name": "Structural Steel Erection",
-            "pct_complete": 100,
-            "start_date": "2026-03-26",
-            "start_offset_pct": 20,
-            "status": "review",
-            "width_pct": 19.3
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-003"
-            ],
-            "duration": 19,
-            "duration_wd": 19,
-            "end_date": "2026-05-20",
-            "id": "TASK-004",
-            "name": "MEP Rough-In",
-            "pct_complete": 0,
-            "start_date": "2026-04-24",
-            "start_offset_pct": 39.3,
-            "status": "in_progress",
-            "width_pct": 18
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-003"
-            ],
-            "duration": 13,
-            "duration_wd": 13,
-            "end_date": "2026-05-12",
-            "id": "TASK-005",
-            "name": "Exterior Cladding",
-            "pct_complete": 0,
-            "start_date": "2026-04-24",
-            "start_offset_pct": 39.3,
-            "status": "scheduled",
-            "width_pct": 12.7
-          },
-          {
-            "dep_lag_wd": [
-              0,
-              0
-            ],
-            "deps": [
-              "TASK-004",
-              "TASK-005"
-            ],
-            "desc": "Project schedule (CPM): Interior Fit-Out.",
-            "duration": 16,
-            "duration_wd": 16,
-            "end_date": "2026-06-11",
-            "id": "TASK-006",
-            "inspection_date": "2026-04-21",
-            "inspection_required": true,
-            "name": "Interior Fit-Out",
-            "pct_complete": 0,
-            "start_date": "2026-05-21",
-            "start_offset_pct": 57.3,
-            "status": "scheduled",
-            "width_pct": 14.7
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-006"
-            ],
-            "duration": 10,
-            "duration_wd": 10,
-            "end_date": "2026-06-25",
-            "id": "TASK-007",
-            "name": "Inspections & Commissioning",
-            "pct_complete": 0,
-            "start_date": "2026-06-12",
-            "start_offset_pct": 72,
-            "status": "scheduled",
-            "width_pct": 9.3
-          },
-          {
-            "dep_lag_wd": [
-              0
-            ],
-            "deps": [
-              "TASK-007"
-            ],
-            "duration": 5,
-            "duration_wd": 5,
-            "end_date": "2026-07-02",
-            "id": "TASK-008",
-            "name": "Final Handover",
-            "pct_complete": 0,
-            "start_date": "2026-06-26",
-            "start_offset_pct": 81.3,
-            "status": "scheduled",
-            "width_pct": 4.7
-          }
-        ],
-        "locked_at": "2026-04-19T15:29:05.772558"
-      },
-      "safety": {
-        "rules": [
-          {
-            "code": "OSHA 1926.502",
-            "enabled": true,
-            "override_reason": null,
-            "rule": "Fall protection required above 1.8m. Full harness mandatory on all elevated work platforms.",
-            "zone_names": [
-              "West Wing",
-              "East Wing"
-            ],
-            "zones": [
-              "Z3",
-              "Z4"
-            ]
-          },
-          {
-            "code": "OSHA 1926.1416",
-            "enabled": true,
-            "override_reason": null,
-            "rule": "Crane exclusion zone of 10m radius during all lifts.",
-            "zone_names": [
-              "Foundation",
-              "Material Bay"
-            ],
-            "zones": [
-              "Z1",
-              "Z2"
-            ]
-          },
-          {
-            "code": "BTVI-SC-2024-02",
-            "enabled": true,
-            "override_reason": null,
-            "rule": "Maximum material stack height: 1.5m in all zones.",
-            "zone_names": [
-              "Material Bay"
-            ],
-            "zones": [
-              "Z2"
-            ]
-          },
-          {
-            "code": "BTVI-SC-2024-01",
-            "enabled": true,
-            "override_reason": null,
-            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
-            "zone_names": [
-              "Foundation",
-              "Material Bay",
-              "West Wing",
-              "East Wing"
-            ],
-            "zones": [
-              "Z1",
-              "Z2",
-              "Z3",
-              "Z4"
-            ]
-          }
-        ],
-        "confirmed_at": "2026-03-30T13:39:03.109913"
-      },
-      "vr": {
-        "matrix": [
-          {
-            "modules": [
-              {
-                "assignment": "Recommended",
-                "category": "Core Module",
-                "completion": 0,
-                "duration_min": 135,
-                "module_id": "VR-M02",
-                "title": "Crane Operation Basics"
-              },
-              {
-                "assignment": "Mandatory",
-                "category": "Mandatory",
-                "completion": 0,
-                "duration_min": 90,
-                "module_id": "VR-M03",
-                "title": "Site Safety Protocols"
-              },
-              {
-                "assignment": "Recommended",
-                "category": "Elective",
-                "completion": 0,
-                "duration_min": 45,
-                "module_id": "VR-M08",
-                "title": "Material Handling"
-              }
-            ],
-            "name": "D. Nottage",
-            "role": "Instructor / PM",
-            "user_id": "USR-001"
-          },
-          {
-            "modules": [
-              {
-                "assignment": "Mandatory",
-                "category": "Core Module",
-                "completion": 0,
-                "duration_min": 135,
-                "module_id": "VR-M02",
-                "title": "Crane Operation Basics"
-              },
-              {
-                "assignment": "Mandatory",
-                "category": "Mandatory",
-                "completion": 0,
-                "duration_min": 90,
-                "module_id": "VR-M03",
-                "title": "Site Safety Protocols"
-              },
-              {
-                "assignment": "Recommended",
-                "category": "Elective",
-                "completion": 0,
-                "duration_min": 45,
-                "module_id": "VR-M08",
-                "title": "Material Handling"
-              }
-            ],
-            "name": "S. Lee",
-            "role": "Safety Officer",
-            "user_id": "USR-005"
-          }
-        ],
-        "compliance_deadline": "2026-02-10",
-        "confirmed_at": "2026-03-30T13:39:04.086248"
-      },
-      "documents": [
-        {
-          "doc_id": "DOC-AF6C8E1C",
-          "name": "New_Project_Init_code_specs.docx",
-          "type": "DOCX",
-          "category": "Documents",
-          "size_kb": 16,
-          "version_note": "",
-          "uploaded_at": "2026-04-05T15:24:39.381033"
-        }
-      ],
-      "budget_total": 275000.0,
-      "budget_spent": 0.0,
-      "progress_pct": 0,
-      "audit_log": [
-        {
-          "ts": "2026-03-30T13:38:41.214090",
-          "action": "draft_created",
+          "ts": "2026-05-22T10:56:33.635061",
+          "action": "building_type_updated",
+          "value": "BT-07",
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:38:44.565736",
-          "action": "building_type_selected",
-          "value": "BT-03",
+          "ts": "2026-05-22T10:56:35.211737",
+          "action": "project_details_updated",
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:38:48.861716",
-          "action": "project_details_saved",
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-03-30T13:38:50.215273",
-          "action": "zones_saved",
+          "ts": "2026-05-22T10:56:36.315643",
+          "action": "zones_updated",
           "count": 4,
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:38:58.741268",
-          "action": "team_saved",
+          "ts": "2026-05-22T10:56:37.821928",
+          "action": "team_updated",
           "count": 2,
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:39:00.845565",
-          "action": "gantt_accepted",
+          "ts": "2026-05-22T10:56:40.194856",
+          "action": "gantt_updated",
           "tasks": 8,
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:39:03.109921",
-          "action": "safety_protocols_confirmed",
-          "rules": 4,
+          "ts": "2026-05-22T10:56:41.516145",
+          "action": "safety_protocols_updated",
+          "rules": 3,
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:39:04.086256",
-          "action": "vr_assignments_confirmed",
+          "ts": "2026-05-22T10:56:42.930200",
+          "action": "vr_assignments_updated",
           "members": 2,
           "user": "usr-001"
         },
         {
-          "ts": "2026-03-30T13:39:17.038943",
-          "action": "project_published",
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-03-31T19:42:53.534337",
-          "action": "budget_spent_updated",
-          "value": 150000.0,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T14:48:06.997458",
-          "action": "budget_spent_updated",
-          "value": 239999.0,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T14:48:48.673638",
-          "action": "team_updated",
-          "count": 2,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:09:13.097319",
-          "action": "budget_spent_updated",
-          "value": 250000.0,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:09:31.842738",
-          "action": "budget_spent_updated",
-          "value": 125000.0,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:09:58.096715",
-          "action": "building_type_updated",
-          "value": "BT-03",
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:10:13.647998",
-          "action": "team_updated",
-          "count": 3,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:24:39.381045",
-          "action": "document_uploaded",
-          "doc_id": "DOC-AF6C8E1C",
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-05T15:24:44.437907",
+          "ts": "2026-05-22T10:57:09.254005",
           "action": "wizard_edit_completed",
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-09T17:59:10.981576",
-          "action": "team_updated",
-          "count": 2,
+          "ts": "2026-06-03T14:19:08.539240",
+          "action": "wizard_edit_completed",
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-13T12:00:56.604451",
-          "action": "team_updated",
-          "count": 5,
+          "ts": "2026-06-04T11:31:41.324918",
+          "action": "building_type_updated",
+          "value": "BT-02",
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-13T13:21:34.728672",
-          "action": "gantt_updated",
-          "tasks": 9,
+          "ts": "2026-06-04T11:32:25.147629",
+          "action": "project_details_updated",
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-13T13:21:46.839709",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:32:01.913993",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:32:05.031824",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:32:57.363397",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:34:15.303101",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:34:36.404978",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-13T13:34:40.061193",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-15T18:05:11.702543",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-15T18:05:14.491731",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-15T18:05:33.140836",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T12:41:06.780370",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T12:41:12.337745",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T12:41:20.921454",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T12:41:23.225294",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T12:43:58.094746",
-          "action": "team_updated",
+          "ts": "2026-06-04T11:32:26.026838",
+          "action": "zones_updated",
           "count": 4,
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-19T15:13:48.063882",
+          "ts": "2026-07-30T11:21:38.516952",
           "action": "gantt_updated",
-          "tasks": 9,
+          "tasks": 8,
           "user": "usr-001"
         },
         {
-          "ts": "2026-04-19T15:13:50.454439",
+          "ts": "2026-07-30T11:21:44.267836",
           "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:13:52.751615",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:13:58.789330",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:14:01.349017",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:16:40.489807",
-          "action": "building_type_updated",
-          "value": "BT-03",
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:17:34.654831",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:17:38.315342",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:18:06.012342",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:18:10.606654",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:29:01.786674",
-          "action": "gantt_updated",
-          "tasks": 9,
-          "user": "usr-001"
-        },
-        {
-          "ts": "2026-04-19T15:29:05.772575",
-          "action": "gantt_updated",
-          "tasks": 9,
+          "tasks": 8,
           "user": "usr-001"
         }
       ],
-      "resources": [
-        {
-          "id": "CR-02",
-          "name": "Tower Crane \u2013 Unit 3",
-          "category": "Heavy Machinery",
-          "status": "available",
-          "location": "Zone 3 \u2013 West Wing",
-          "notes": "Assigned \u2014 Johnson 4 Bedroom Home"
+      "budget_total": 275000.0,
+      "budget_spent": 1500.0,
+      "kanban_extra_tasks": [],
+      "design_spec": {
+        "version": 2,
+        "name": "Johnson Family Home",
+        "building_type_id": "BT-01",
+        "units": "m",
+        "default_wall": {
+          "thickness": 0.2,
+          "height": 3.0
         },
-        {
-          "id": "SF-1055",
-          "name": "Safety Officer \u2013 S. Lee",
-          "category": "Personnel",
-          "status": "available",
-          "location": "Zone 4 \u2013 East Wing",
-          "notes": "Johnson 4 Bedroom Home: Conducting safety inspection"
+        "foundation": {
+          "depth": 0.6,
+          "margin": 0.6
         },
-        {
-          "id": "RS-0D7A80",
-          "name": "POrtable Generator",
-          "category": "Heavy Machinery",
-          "status": "available",
-          "location": "Zone 3 \u2013 West Wing",
-          "notes": "authorized personnel only"
-        }
-      ],
-      "kanban_extra_tasks": [
-        {
-          "id": "t1776100574076",
-          "name": "Roof Insulation Install",
-          "desc": "No description provided.",
-          "status": "scheduled",
-          "schedule_pct": 0,
-          "days_remaining": 7,
-          "priority": "med",
-          "assignees": [
-            "DN",
-            "JS"
-          ],
-          "category": "Foundation",
-          "start_date": "2026-04-24",
-          "end_date": "2026-05-04",
-          "duration_wd": 7,
-          "deps": [
-            "TASK-003"
-          ],
-          "dep_lag_wd": [
-            0
-          ],
-          "resource_pool": "general"
-        }
-      ]
+        "roof": {
+          "type": "gable",
+          "parapet": 0.6,
+          "ridge_height": 2.0
+        },
+        "storeys": [
+          {
+            "id": "s1",
+            "name": "Ground Floor",
+            "height": 3.0,
+            "slab_thickness": 0.3,
+            "walls": [
+              {
+                "id": "w0",
+                "x1": -6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o0",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  },
+                  {
+                    "id": "door",
+                    "kind": "door",
+                    "center": 0.25,
+                    "width": 1.1,
+                    "height": 2.1,
+                    "sill": 0.0
+                  }
+                ]
+              },
+              {
+                "id": "w1",
+                "x1": 6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o1",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w2",
+                "x1": 6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o2",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w3",
+                "x1": -6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o3",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              }
+            ],
+            "columns": [
+              {
+                "id": "c0",
+                "x": -6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c1",
+                "x": 6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c2",
+                "x": 6.0,
+                "y": 5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c3",
+                "x": -6.0,
+                "y": 5.0,
+                "size": 0.4
+              }
+            ],
+            "mep": [],
+            "rooms": [
+              {
+                "id": "r6_pxmd",
+                "name": "Room 1",
+                "type": "",
+                "poly": [
+                  [
+                    -6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    5.0
+                  ],
+                  [
+                    -6.0,
+                    5.0
+                  ]
+                ],
+                "area": 120.0
+              }
+            ]
+          },
+          {
+            "id": "s2",
+            "name": "Level 2",
+            "height": 3.0,
+            "slab_thickness": 0.3,
+            "walls": [
+              {
+                "id": "w0",
+                "x1": -6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o0",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w1",
+                "x1": 6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o1",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w2",
+                "x1": 6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o2",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w3",
+                "x1": -6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o3",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              }
+            ],
+            "columns": [
+              {
+                "id": "c0",
+                "x": -6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c1",
+                "x": 6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c2",
+                "x": 6.0,
+                "y": 5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c3",
+                "x": -6.0,
+                "y": 5.0,
+                "size": 0.4
+              }
+            ],
+            "mep": [],
+            "rooms": [
+              {
+                "id": "r7_yfhy",
+                "name": "Room 1",
+                "type": "",
+                "poly": [
+                  [
+                    -6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    5.0
+                  ],
+                  [
+                    -6.0,
+                    5.0
+                  ]
+                ],
+                "area": 120.0
+              }
+            ]
+          }
+        ]
+      }
     },
     "PRJ-EA6E1FD3": {
       "project_id": "PRJ-EA6E1FD3",
@@ -35587,13 +36895,15 @@
       },
       "documents": [
         {
-          "doc_id": "DOC-20617A2C",
-          "name": "New_Project_Init_code_specs.docx",
-          "type": "DOCX",
-          "category": "Documents",
-          "size_kb": 16,
-          "version_note": "",
-          "uploaded_at": "2026-04-19T15:24:12.220999"
+          "doc_id": "DOC-DESIGN-STUDIO",
+          "name": "Single-Family Residence (Design Studio)",
+          "type": "DESIGN",
+          "category": "Design Studio",
+          "size_kb": 3,
+          "version_note": "2 storeys",
+          "bim_phase": "",
+          "uploaded_at": "2026-07-30T11:30:22.234884",
+          "source": "design_studio"
         }
       ],
       "budget_total": 275000.0,
@@ -35662,6 +36972,1355 @@
         },
         {
           "ts": "2026-04-19T15:24:26.299157",
+          "action": "project_published",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-22T11:54:46.179266",
+          "action": "wizard_edit_completed",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-24T17:12:48.537267",
+          "action": "document_removed",
+          "doc_id": "DOC-20617A2C",
+          "user": "usr-001"
+        }
+      ],
+      "design_spec": {
+        "version": 2,
+        "name": "Single-Family Residence",
+        "building_type_id": "BT-01",
+        "units": "m",
+        "default_wall": {
+          "thickness": 0.2,
+          "height": 3.0
+        },
+        "foundation": {
+          "depth": 0.6,
+          "margin": 0.6
+        },
+        "roof": {
+          "type": "gable",
+          "parapet": 0.6,
+          "ridge_height": 2.0
+        },
+        "storeys": [
+          {
+            "id": "s1",
+            "name": "Ground Floor",
+            "height": 3.0,
+            "slab_thickness": 0.3,
+            "walls": [
+              {
+                "id": "w0",
+                "x1": -6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o0",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  },
+                  {
+                    "id": "door",
+                    "kind": "door",
+                    "center": 0.2755,
+                    "width": 1.1,
+                    "height": 2.1,
+                    "sill": 0.0
+                  }
+                ]
+              },
+              {
+                "id": "w1",
+                "x1": 6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o1",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w2",
+                "x1": 6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o2",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w3",
+                "x1": -6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o3",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              }
+            ],
+            "columns": [
+              {
+                "id": "c0",
+                "x": -6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c1",
+                "x": 6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c2",
+                "x": 6.0,
+                "y": 5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c3",
+                "x": -6.0,
+                "y": 5.0,
+                "size": 0.4
+              }
+            ],
+            "mep": [],
+            "rooms": [
+              {
+                "id": "r28_ha6q",
+                "name": "Room 1",
+                "type": "",
+                "poly": [
+                  [
+                    -6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    5.0
+                  ],
+                  [
+                    -6.0,
+                    5.0
+                  ]
+                ],
+                "area": 120.0
+              }
+            ]
+          },
+          {
+            "id": "s2",
+            "name": "Bedrooms",
+            "height": 3.0,
+            "slab_thickness": 0.3,
+            "walls": [
+              {
+                "id": "w0",
+                "x1": -6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o0",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w1",
+                "x1": 6.0,
+                "y1": -5.0,
+                "x2": 6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o1",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w2",
+                "x1": 6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": 5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o2",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "w3",
+                "x1": -6.0,
+                "y1": 5.0,
+                "x2": -6.0,
+                "y2": -5.0,
+                "thickness": 0.2,
+                "openings": [
+                  {
+                    "id": "o3",
+                    "kind": "window",
+                    "center": 0.5,
+                    "width": 1.6,
+                    "height": 1.5,
+                    "sill": 1.0
+                  }
+                ]
+              }
+            ],
+            "columns": [
+              {
+                "id": "c0",
+                "x": -6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c1",
+                "x": 6.0,
+                "y": -5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c2",
+                "x": 6.0,
+                "y": 5.0,
+                "size": 0.4
+              },
+              {
+                "id": "c3",
+                "x": -6.0,
+                "y": 5.0,
+                "size": 0.4
+              }
+            ],
+            "mep": [],
+            "rooms": [
+              {
+                "id": "r29_5qgf",
+                "name": "Room 1",
+                "type": "",
+                "poly": [
+                  [
+                    -6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    -5.0
+                  ],
+                  [
+                    6.0,
+                    5.0
+                  ],
+                  [
+                    -6.0,
+                    5.0
+                  ]
+                ],
+                "area": 120.0
+              }
+            ]
+          }
+        ]
+      },
+      "design_saved_at": "2026-07-30T11:30:22.234758"
+    },
+    "PRJ-82EA806E": {
+      "project_id": "PRJ-82EA806E",
+      "draft_id": "DRF-7B4271F7",
+      "status": "active",
+      "published_at": "2026-05-26T10:32:54.434742",
+      "building": {
+        "building_type_id": "BT-02",
+        "name": "Multi-Family / Apartment",
+        "category": "Residential"
+      },
+      "details": {
+        "project_name": "Johnson Family home 4",
+        "client_org": "BTVI",
+        "site_address": "Sandilands Village Rd",
+        "start_date": "2026-05-29",
+        "end_date": "2026-09-30",
+        "budget": 750000.0,
+        "budget_spent": 0.0,
+        "currency": "BSD$",
+        "description": "",
+        "logo_url": null,
+        "duration_days": 124,
+        "duration_months": 4.1
+      },
+      "zones": [
+        {
+          "id": "Z1",
+          "name": "Foundation",
+          "camera": "CAM-01"
+        },
+        {
+          "id": "Z2",
+          "name": "Material Bay",
+          "camera": "CAM-02"
+        },
+        {
+          "id": "Z3",
+          "name": "West Wing",
+          "camera": "CAM-03"
+        },
+        {
+          "id": "Z4",
+          "name": "East Wing",
+          "camera": "CAM-04"
+        },
+        {
+          "id": "Z5",
+          "name": "Crane Exclusion Zone",
+          "camera": "CAM-05"
+        }
+      ],
+      "team": {
+        "members": [
+          {
+            "avatar": "/static/assets/passportphotodominicnottage.jpg",
+            "email": "dnottage@btvi.edu.bs",
+            "id": "USR-001",
+            "name": "D. Nottage",
+            "role": "Instructor / PM"
+          },
+          {
+            "avatar": null,
+            "email": "jsmith@btvi.edu.bs",
+            "id": "USR-002",
+            "name": "J. Smith",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "ajohnson@btvi.edu.bs",
+            "id": "USR-003",
+            "name": "A. Johnson",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "mwilliams@btvi.edu.bs",
+            "id": "USR-004",
+            "name": "M. Williams",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "slee@btvi.edu.bs",
+            "id": "USR-005",
+            "name": "S. Lee",
+            "role": "Safety Officer"
+          }
+        ],
+        "role_counts": {
+          "Instructor / PM": 1,
+          "Student": 3,
+          "Safety Officer": 1
+        },
+        "gaps": []
+      },
+      "gantt": {
+        "tasks": [
+          {
+            "dep_lag_wd": [],
+            "deps": [],
+            "duration": 7,
+            "duration_wd": 7,
+            "end_date": "2026-06-08",
+            "id": "TASK-001",
+            "name": "Site Preparation & Piling",
+            "pct_complete": 0,
+            "resource_pool": "crew_earth",
+            "start_date": "2026-05-29",
+            "start_offset_pct": 0,
+            "status": "scheduled",
+            "width_pct": 8.9
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-001"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2026-06-19",
+            "id": "TASK-002",
+            "name": "Foundation & Ground Slab",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-06-09",
+            "start_offset_pct": 8.9,
+            "status": "scheduled",
+            "width_pct": 8.9
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-002"
+            ],
+            "duration": 19,
+            "duration_wd": 19,
+            "end_date": "2026-07-16",
+            "id": "TASK-003",
+            "name": "Structural Steel Erection",
+            "pct_complete": 0,
+            "resource_pool": "crew_structure",
+            "start_date": "2026-06-22",
+            "start_offset_pct": 19.4,
+            "status": "scheduled",
+            "width_pct": 20.2
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 11,
+            "duration_wd": 11,
+            "end_date": "2026-07-31",
+            "id": "TASK-004",
+            "name": "Concrete Floor Slabs",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-07-17",
+            "start_offset_pct": 39.5,
+            "status": "scheduled",
+            "width_pct": 12.1
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 14,
+            "duration_wd": 14,
+            "end_date": "2026-08-20",
+            "id": "TASK-005",
+            "name": "MEP Rough-In",
+            "pct_complete": 0,
+            "resource_pool": "crew_mep",
+            "start_date": "2026-08-03",
+            "start_offset_pct": 53.2,
+            "status": "scheduled",
+            "width_pct": 14.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-004"
+            ],
+            "duration": 11,
+            "duration_wd": 11,
+            "end_date": "2026-08-17",
+            "id": "TASK-006",
+            "name": "Facade & Cladding",
+            "pct_complete": 0,
+            "resource_pool": "crew_envelope",
+            "start_date": "2026-08-03",
+            "start_offset_pct": 53.2,
+            "status": "scheduled",
+            "width_pct": 12.1
+          },
+          {
+            "dep_lag_wd": [
+              0,
+              0
+            ],
+            "deps": [
+              "TASK-005",
+              "TASK-006"
+            ],
+            "duration": 12,
+            "duration_wd": 12,
+            "end_date": "2026-09-07",
+            "id": "TASK-007",
+            "name": "Interior Fit-Out",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2026-08-21",
+            "start_offset_pct": 67.7,
+            "status": "scheduled",
+            "width_pct": 14.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-007"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2026-09-18",
+            "id": "TASK-008",
+            "name": "Inspections & Commissioning",
+            "pct_complete": 0,
+            "resource_pool": "crew_closeout",
+            "start_date": "2026-09-08",
+            "start_offset_pct": 82.3,
+            "status": "scheduled",
+            "width_pct": 8.9
+          }
+        ],
+        "locked_at": "2026-05-26T10:31:21.228058"
+      },
+      "safety": {
+        "rules": [
+          {
+            "code": "OSHA 1926.502",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fall protection required above 1.8m. Full harness mandatory above Level 2.",
+            "zone_names": [
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "OSHA 1926.1416",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Crane exclusion zone of 15m radius must be maintained during lifts.",
+            "zone_names": [
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z5"
+            ]
+          },
+          {
+            "code": "OSHA 1926.150",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fire suppression equipment at all floor levels.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4"
+            ]
+          },
+          {
+            "code": "BTVI-SC-2024-01",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
+            "zone_names": [
+              "Foundation",
+              "Material Bay",
+              "West Wing",
+              "East Wing",
+              "Crane Exclusion Zone"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3",
+              "Z4",
+              "Z5"
+            ]
+          }
+        ],
+        "confirmed_at": "2026-05-26T10:31:36.346505"
+      },
+      "vr": {
+        "matrix": [
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "D. Nottage",
+            "role": "Instructor / PM",
+            "user_id": "USR-001"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "J. Smith",
+            "role": "Student",
+            "user_id": "USR-002"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "A. Johnson",
+            "role": "Student",
+            "user_id": "USR-003"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "M. Williams",
+            "role": "Student",
+            "user_id": "USR-004"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 135,
+                "module_id": "VR-M02",
+                "title": "Crane Operation Basics"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 90,
+                "module_id": "VR-M06",
+                "title": "Steel Assembly"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M07",
+                "title": "Fall Protection"
+              }
+            ],
+            "name": "S. Lee",
+            "role": "Safety Officer",
+            "user_id": "USR-005"
+          }
+        ],
+        "compliance_deadline": "2026-05-15",
+        "confirmed_at": "2026-05-26T10:31:41.435951"
+      },
+      "documents": [],
+      "budget_total": 750000.0,
+      "budget_spent": 0.0,
+      "progress_pct": 0,
+      "kanban_extra_tasks": [],
+      "budget_spent_manual": false,
+      "audit_log": [
+        {
+          "ts": "2026-05-26T10:30:32.057583",
+          "action": "draft_created",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:30:35.250314",
+          "action": "building_type_selected",
+          "value": "BT-02",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:00.841785",
+          "action": "project_details_saved",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:03.421481",
+          "action": "zones_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:08.314241",
+          "action": "zones_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:16.955501",
+          "action": "team_saved",
+          "count": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:21.228075",
+          "action": "gantt_accepted",
+          "tasks": 8,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:36.346519",
+          "action": "safety_protocols_confirmed",
+          "rules": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:31:41.435970",
+          "action": "vr_assignments_confirmed",
+          "members": 5,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-05-26T10:32:54.434755",
+          "action": "project_published",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-06-03T11:25:17.087777",
+          "action": "document_uploaded",
+          "doc_id": "DOC-D6DA1B95",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-06-03T11:25:23.267698",
+          "action": "wizard_edit_completed",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-06-03T11:25:48.758091",
+          "action": "document_removed",
+          "doc_id": "DOC-D6DA1B95",
+          "user": "usr-001"
+        }
+      ]
+    },
+    "PRJ-9FD7F4F2": {
+      "project_id": "PRJ-9FD7F4F2",
+      "draft_id": "DRF-9CBDA314",
+      "status": "active",
+      "published_at": "2026-07-30T11:37:30.437006",
+      "building": {
+        "building_type_id": "BT-01",
+        "name": "Single-Family Residence",
+        "category": "Residential"
+      },
+      "details": {
+        "project_name": "Johnson Family home 123",
+        "client_org": "BTVI",
+        "site_address": "Sandilands Village Rd 65",
+        "start_date": "2026-08-05",
+        "end_date": "2026-12-31",
+        "budget": 500000.0,
+        "budget_spent": 0.0,
+        "currency": "BSD$",
+        "description": "",
+        "logo_url": null,
+        "duration_days": 148,
+        "duration_months": 4.9
+      },
+      "zones": [
+        {
+          "id": "Z1",
+          "name": "Foundation",
+          "camera": "CAM-01"
+        },
+        {
+          "id": "Z2",
+          "name": "Framing Bay",
+          "camera": "CAM-02"
+        },
+        {
+          "id": "Z3",
+          "name": "Material Storage",
+          "camera": "CAM-03"
+        },
+        {
+          "id": "Z4",
+          "name": "Car Park",
+          "camera": "CAM-04"
+        }
+      ],
+      "team": {
+        "members": [
+          {
+            "avatar": "/static/assets/passportphotodominicnottage.jpg",
+            "email": "dnottage@btvi.edu.bs",
+            "id": "USR-001",
+            "name": "D. Nottage",
+            "role": "Instructor / PM"
+          },
+          {
+            "avatar": null,
+            "email": "jsmith@btvi.edu.bs",
+            "id": "USR-002",
+            "name": "J. Smith",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "ajohnson@btvi.edu.bs",
+            "id": "USR-003",
+            "name": "A. Johnson",
+            "role": "Student"
+          },
+          {
+            "avatar": null,
+            "email": "slee@btvi.edu.bs",
+            "id": "USR-005",
+            "name": "S. Lee",
+            "role": "Safety Officer"
+          }
+        ],
+        "role_counts": {
+          "Instructor / PM": 1,
+          "Student": 2,
+          "Safety Officer": 1
+        },
+        "gaps": []
+      },
+      "gantt": {
+        "tasks": [
+          {
+            "dep_lag_wd": [],
+            "deps": [],
+            "duration": 14,
+            "duration_wd": 14,
+            "end_date": "2026-08-24",
+            "id": "TASK-001",
+            "name": "Site Preparation & Excavation",
+            "pct_complete": 0,
+            "resource_pool": "crew_earth",
+            "start_date": "2026-08-05",
+            "start_offset_pct": 0,
+            "status": "scheduled",
+            "width_pct": 13.5
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-001"
+            ],
+            "duration": 21,
+            "duration_wd": 21,
+            "end_date": "2026-09-22",
+            "id": "TASK-002",
+            "name": "Foundation Pouring",
+            "pct_complete": 0,
+            "resource_pool": "crew_concrete",
+            "start_date": "2026-08-25",
+            "start_offset_pct": 13.5,
+            "status": "scheduled",
+            "width_pct": 19.6
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-002"
+            ],
+            "duration": 36,
+            "duration_wd": 36,
+            "end_date": "2026-11-11",
+            "id": "TASK-003",
+            "name": "Wood Frame Erection",
+            "pct_complete": 0,
+            "resource_pool": "crew_structure",
+            "start_date": "2026-09-23",
+            "start_offset_pct": 33.1,
+            "status": "scheduled",
+            "width_pct": 33.8
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 27,
+            "duration_wd": 27,
+            "end_date": "2026-12-18",
+            "id": "TASK-004",
+            "name": "Roofing Installation",
+            "pct_complete": 0,
+            "resource_pool": "crew_roof",
+            "start_date": "2026-11-12",
+            "start_offset_pct": 66.9,
+            "status": "scheduled",
+            "width_pct": 25
+          },
+          {
+            "dep_lag_wd": [
+              1
+            ],
+            "deps": [
+              "TASK-003"
+            ],
+            "duration": 32,
+            "duration_wd": 32,
+            "end_date": "2026-12-28",
+            "id": "TASK-005",
+            "name": "MEP Rough-In",
+            "pct_complete": 0,
+            "resource_pool": "crew_mep",
+            "start_date": "2026-11-13",
+            "start_offset_pct": 67.6,
+            "status": "scheduled",
+            "width_pct": 31.1
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-005"
+            ],
+            "duration": 21,
+            "duration_wd": 21,
+            "end_date": "2027-01-26",
+            "id": "TASK-006",
+            "name": "Insulation & Drywall",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2026-12-29",
+            "start_offset_pct": 98.6,
+            "status": "scheduled",
+            "width_pct": 19.6
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-006"
+            ],
+            "duration": 18,
+            "duration_wd": 18,
+            "end_date": "2027-02-19",
+            "id": "TASK-007",
+            "name": "Interior Fit-Out",
+            "pct_complete": 0,
+            "resource_pool": "crew_interior",
+            "start_date": "2027-01-27",
+            "start_offset_pct": 100,
+            "status": "scheduled",
+            "width_pct": 16.2
+          },
+          {
+            "dep_lag_wd": [
+              0
+            ],
+            "deps": [
+              "TASK-007"
+            ],
+            "duration": 9,
+            "duration_wd": 9,
+            "end_date": "2027-03-04",
+            "id": "TASK-008",
+            "name": "Final Inspection & Handover",
+            "pct_complete": 0,
+            "resource_pool": "crew_closeout",
+            "start_date": "2027-02-22",
+            "start_offset_pct": 100,
+            "status": "scheduled",
+            "width_pct": 7.4
+          }
+        ],
+        "locked_at": "2026-07-30T11:35:31.688823"
+      },
+      "safety": {
+        "rules": [
+          {
+            "code": "OSHA 1926.502",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fall protection required above 1.8m on any open surface.",
+            "zone_names": [
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z2",
+              "Z3"
+            ]
+          },
+          {
+            "code": "OSHA 1926.150",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "Fire extinguisher required within 30m of all active work areas.",
+            "zone_names": [
+              "Foundation",
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3"
+            ]
+          },
+          {
+            "code": "BTVI-SC-2024-01",
+            "enabled": true,
+            "override_reason": null,
+            "rule": "PPE mandatory in all zones: hard hat, hi-vis vest, steel-toe boots.",
+            "zone_names": [
+              "Foundation",
+              "Framing Bay",
+              "Material Storage"
+            ],
+            "zones": [
+              "Z1",
+              "Z2",
+              "Z3"
+            ]
+          }
+        ],
+        "confirmed_at": "2026-07-30T11:36:52.679022"
+      },
+      "vr": {
+        "matrix": [
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "D. Nottage",
+            "role": "Instructor / PM",
+            "user_id": "USR-001"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "J. Smith",
+            "role": "Student",
+            "user_id": "USR-002"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Recommended",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "A. Johnson",
+            "role": "Student",
+            "user_id": "USR-003"
+          },
+          {
+            "modules": [
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 45,
+                "module_id": "VR-M01",
+                "title": "Hand Tool Safety"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Core Module",
+                "completion": 0,
+                "duration_min": 60,
+                "module_id": "VR-M04",
+                "title": "Concrete Basics"
+              },
+              {
+                "assignment": "Mandatory",
+                "category": "Mandatory",
+                "completion": 0,
+                "duration_min": 75,
+                "module_id": "VR-M05",
+                "title": "Roofing Safety"
+              }
+            ],
+            "name": "S. Lee",
+            "role": "Safety Officer",
+            "user_id": "USR-005"
+          }
+        ],
+        "compliance_deadline": "2026-07-22",
+        "confirmed_at": "2026-07-30T11:37:14.016238"
+      },
+      "documents": [],
+      "budget_total": 500000.0,
+      "budget_spent": 0.0,
+      "progress_pct": 0,
+      "kanban_extra_tasks": [],
+      "budget_spent_manual": false,
+      "audit_log": [
+        {
+          "ts": "2026-07-30T11:31:50.432724",
+          "action": "draft_created",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:32:09.176189",
+          "action": "building_type_selected",
+          "value": "BT-01",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:32:44.536819",
+          "action": "project_details_saved",
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:33:34.872234",
+          "action": "zones_saved",
+          "count": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:34:04.759757",
+          "action": "team_saved",
+          "count": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:35:31.688839",
+          "action": "gantt_accepted",
+          "tasks": 8,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:36:52.679033",
+          "action": "safety_protocols_confirmed",
+          "rules": 3,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:37:14.016248",
+          "action": "vr_assignments_confirmed",
+          "members": 4,
+          "user": "usr-001"
+        },
+        {
+          "ts": "2026-07-30T11:37:30.437026",
           "action": "project_published",
           "user": "usr-001"
         }

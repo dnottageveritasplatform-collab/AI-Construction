@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Mockup — Resourciist</title>
+<link rel="stylesheet" href="shared.css"/>
+<style>
+.content { flex:1; padding:16px 20px; overflow:hidden; display:flex; flex-direction:column; gap:12px; }
+.toolbar { display:flex; gap:10px; align-items:center; }
+.search { flex:1; max-width:280px; background:#141414; border:1px solid #333; border-radius:6px; padding:8px 12px; font-size:11px; color:#888; }
+.filters { display:flex; gap:6px; }
+.filter { padding:6px 12px; border-radius:16px; font-size:10px; border:1px solid #333; color:#888; }
+.filter.on { background:rgba(33,150,243,.15); border-color:#2196F3; color:#2196F3; }
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { text-align:left; padding:10px 12px; color:#888; border-bottom:1px solid #333; font-weight:500; }
+td { padding:10px 12px; border-bottom:1px solid #2a2a2a; }
+.status-pill { padding:2px 8px; border-radius:10px; font-size:9px; }
+.avail { background:rgba(76,175,80,.15); color:#4CAF50; }
+.inuse { background:rgba(33,150,243,.15); color:#2196F3; }
+.low { background:rgba(255,152,0,.15); color:#FF9800; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="nav"><span class="brand">Veritas AI Construction Platform</span><a class="on">Resourciist</a></div>
+  <div class="content">
+    <div class="toolbar">
+      <div class="search">Search assets, personnel, materials…</div>
+      <div class="filters"><span class="filter on">All</span><span class="filter">Personnel</span><span class="filter">Machinery</span><span class="filter">Materials</span></div>
+    </div>
+    <div class="card" style="flex:1;overflow:hidden;">
+      <table>
+        <thead><tr><th>Resource</th><th>Category</th><th>Location</th><th>Status</th><th>Qty</th></tr></thead>
+        <tbody>
+          <tr><td>Mobile Crane — Liebherr LTM</td><td>Heavy Machinery</td><td>Zone A</td><td><span class="status-pill inuse">In Use</span></td><td>1</td></tr>
+          <tr><td>Site Foreman — J. Smith</td><td>Personnel</td><td>Zone B</td><td><span class="status-pill avail">Available</span></td><td>—</td></tr>
+          <tr><td>Rebar — Grade 60 (#5)</td><td>Materials</td><td>Yard Store</td><td><span class="status-pill low">Low Stock</span></td><td>420 kg</td></tr>
+          <tr><td>Excavator — CAT 320</td><td>Heavy Machinery</td><td>Zone D</td><td><span class="status-pill avail">Available</span></td><td>1</td></tr>
+          <tr><td>Concrete — Ready Mix</td><td>Materials</td><td>Batch Plant</td><td><span class="status-pill avail">Available</span></td><td>12 m³</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

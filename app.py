@@ -38,6 +38,8 @@ from api.project     import project_bp
 from api.vr_training import vr_bp
 from api.new_project import new_project_bp          # UC-09
 from api.ifc_route   import ifc_bp                     # IFC upload
+from api.speckle_route import speckle_bp               # Speckle live BIM
+from api.design_route import design_bp                 # Parametric design studio
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +69,8 @@ def create_app(env: str = "development") -> Flask:
     app.register_blueprint(vr_bp)
     app.register_blueprint(new_project_bp)          # UC-09
     app.register_blueprint(ifc_bp)                     # IFC upload
+    app.register_blueprint(speckle_bp)                 # Speckle live BIM
+    app.register_blueprint(design_bp)                  # Parametric design studio
 
     return app
 
@@ -263,6 +267,12 @@ def edit_project_redirect():
 @app.route("/new-project")                           # UC-09
 def new_project():
     return render_template("new_project_wizard.html")
+
+
+@app.route("/design-studio")
+def design_studio():
+    """Parametric building design studio — create a design inside the app."""
+    return render_template("design_studio.html")
 
 
 # ---------------------------------------------------------------------------

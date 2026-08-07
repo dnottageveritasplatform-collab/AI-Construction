@@ -1,0 +1,15 @@
+/* Shared mockup chrome for Veritas design document */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0c; color: #fff; }
+.frame { width: 1280px; height: 720px; border: 1px solid #333; border-radius: 10px; overflow: hidden; background: #121212; display: flex; flex-direction: column; }
+.nav { height: 52px; background: #18181B; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 20px; gap: 24px; flex-shrink: 0; }
+.nav .brand { font-weight: 700; font-size: 14px; margin-right: auto; }
+.nav a { color: #888; text-decoration: none; font-size: 12px; }
+.nav a.on { color: #fff; border-bottom: 2px solid #2196F3; padding-bottom: 14px; }
+.chip { font-size: 10px; padding: 3px 8px; border-radius: 12px; background: rgba(76,175,80,.15); color: #4CAF50; border: 1px solid rgba(76,175,80,.3); }
+.card { background: #1E1E1E; border: 1px solid #333; border-radius: 10px; }
+.muted { color: #888; font-size: 11px; }
+.blue { color: #2196F3; }
+.red { color: #E57373; }
+.green { color: #4CAF50; }
+.orange { color: #FF9800; }

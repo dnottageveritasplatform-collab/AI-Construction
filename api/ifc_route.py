@@ -1383,6 +1383,20 @@ def get_ifc_geometry(project_id: str):
         project_id, phase_req or None
     )
     if not path:
+        # No uploaded IFC/DWG — fall back to an in-app parametric design when the
+        # user created one (api/design_generator). Renders in the same viewer.
+        proj = STORE_PROJECTS.get(project_id) or {}
+        design_spec = proj.get("design_spec") if isinstance(proj, dict) else None
+        if isinstance(design_spec, dict):
+            try:
+                import json as _json
+                from api.design_generator import generate
+
+                geo = generate(design_spec, phase_req or None)
+                out = _json.dumps(geo, separators=(",", ":")).encode("utf-8")
+                return _json_response_maybe_gzip(out)
+            except Exception:
+                logger.exception("Design geometry fallback failed for %s", project_id)
         return (
             jsonify({"meshes": [], "status": "no_ifc_for_project"}),
             404,

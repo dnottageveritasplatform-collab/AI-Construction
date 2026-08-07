@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Select & Move</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar"><strong>Design Studio</strong><span class="spacer"></span><button class="btn primary">Save</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Draw tools</h3><div class="tools"><div class="tool on">Select / Move</div><div class="tool">Wall</div><div class="tool">Column</div><div class="tool">Door</div><div class="tool">Window</div><div class="tool">MEP</div></div></div>
+      <div class="group"><h3>Selected</h3><p style="font-size:11px;color:#ffd166;">Wall segment</p><p class="muted" style="margin-top:4px">Drag body to move · endpoint to stretch</p></div>
+    </aside>
+    <main class="stage">
+      <div class="grid-bg"></div>
+      <div class="wall" style="left:14%;top:20%;width:30%;"></div>
+      <div class="wall sel" style="left:44%;top:20%;width:40%;"></div>
+      <div class="wall" style="left:14%;top:20%;width:0;transform:rotate(90deg);width:50%;"></div>
+      <div class="wall" style="left:14%;top:70%;width:70%;"></div>
+      <div class="col" style="left:44%;top:70%;width:16px;height:16px;margin-left:-8px;margin-top:-8px;box-shadow:0 0 0 2px #ffd166;"></div>
+      <div class="window" style="left:58%;top:19.5%;width:10%;box-shadow:0 0 0 2px #ffd166;"></div>
+      <div style="position:absolute;left:44%;top:18%;width:10px;height:10px;background:#ffd166;border-radius:50%;border:2px solid #0d1117;"></div>
+      <div style="position:absolute;left:84%;top:18%;width:10px;height:10px;background:#ffd166;border-radius:50%;border:2px solid #0d1117;"></div>
+      <div class="callout" style="left:52%;top:32%;"><strong>Wall body</strong>Drag the middle to move the entire wall.</div>
+      <div class="callout" style="left:72%;top:12%;"><strong>Endpoint</strong>Drag a corner to stretch or rotate.</div>
+      <div class="callout" style="left:48%;top:58%;"><strong>Column</strong>Drag to reposition on the grid.</div>
+      <div class="callout" style="left:62%;top:8%;"><strong>Opening</strong>Drag door/window along its host wall.</div>
+      <div class="hud">Delete key removes the selected element · right-drag pans · scroll zooms</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

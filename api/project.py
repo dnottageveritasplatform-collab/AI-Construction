@@ -12,6 +12,7 @@ from datetime import datetime
 from flask  import Blueprint, jsonify, request
 from config import Config
 from data.project_store import PROJECTS as STORE_PROJECTS, store
+from api.design_route import DESIGN_DOC_ID, design_document_entry
 
 project_bp = Blueprint("project", __name__, url_prefix="/api/project")
 IFC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "uploads", "ifc")
@@ -197,6 +198,24 @@ def get_documents():
                 "updated": d.get("uploaded_at", "").replace("T", " ")[:16] or "Recently",
             })
 
+        # Designs saved before document registration still have design_spec only.
+        proj = STORE_PROJECTS.get(project_id) or {}
+        design_spec = proj.get("design_spec")
+        if isinstance(design_spec, dict) and DESIGN_DOC_ID not in seen_ids:
+            d = design_document_entry(design_spec)
+            saved_at = str(proj.get("design_saved_at") or "").strip()
+            if saved_at:
+                d["uploaded_at"] = saved_at
+            size_kb = int(d.get("size_kb", 0) or 0)
+            normalized.append({
+                "id": DESIGN_DOC_ID,
+                "name": d.get("name", "Building Design (Design Studio)"),
+                "type": "DESIGN",
+                "size": f"{size_kb}KB" if size_kb < 1024 else f"{size_kb / 1024:.1f}MB",
+                "updated": d.get("uploaded_at", "").replace("T", " ")[:16] or "Recently",
+            })
+            seen_ids.add(DESIGN_DOC_ID)
+
         # Also surface BIM uploads (IFC / DWG / DXF) on disk for this project.
         try:
             disk_bim: list[tuple[str, str, str]] = []
@@ -250,6 +269,11 @@ def delete_document(doc_id: str):
     new_docs = [d for d in docs if str(d.get("doc_id", "")) != doc_id]
     if len(new_docs) != len(docs):
         proj["documents"] = new_docs
+        removed_meta = True
+
+    if doc_id == DESIGN_DOC_ID and isinstance(proj.get("design_spec"), dict):
+        proj.pop("design_spec", None)
+        proj.pop("design_saved_at", None)
         removed_meta = True
 
     # Delete any BIM file(s) on disk named "<project_id>_<doc_id>.<ext>".

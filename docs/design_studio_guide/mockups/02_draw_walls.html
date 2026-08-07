@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Draw Walls</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar"><strong>Design Studio</strong><span class="spacer"></span><button class="btn primary">Save</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Draw tools</h3><div class="tools"><div class="tool">Select</div><div class="tool on">Wall</div><div class="tool">Column</div><div class="tool">Door</div><div class="tool">Window</div><div class="tool">MEP</div></div></div>
+      <div class="group"><h3>Wall defaults</h3><p class="muted">Thickness: 0.20 m</p><p class="muted" style="margin-top:6px">Snap to 0.5 m grid: on</p></div>
+    </aside>
+    <main class="stage">
+      <div class="tabs"><span class="on">2D Plan</span><span>3D View</span></div>
+      <div class="grid-bg"></div>
+      <!-- completed walls -->
+      <div class="wall" style="left:18%;top:22%;width:28%;transform:rotate(0deg);"></div>
+      <div class="wall" style="left:46%;top:22%;width:0;height:0;transform:rotate(90deg);width:40%;left:46%;top:22%;"></div>
+      <div class="wall" style="left:18%;top:62%;width:28%;"></div>
+      <div class="wall" style="left:18%;top:22%;width:0;height:0;transform:rotate(90deg);width:40%;"></div>
+      <!-- rubber-band in progress -->
+      <div class="wall pending" style="left:46%;top:62%;width:22%;transform:rotate(0deg);"></div>
+      <div class="step-num" style="left:44%;top:20%;">1</div>
+      <div class="step-num" style="left:44%;top:60%;">2</div>
+      <div class="step-num" style="left:68%;top:60%;">3</div>
+      <div class="callout" style="left:52%;top:38%;"><strong>Wall tool</strong>Click start point, then click end. Each click chains a new segment. Press Esc to stop.</div>
+      <div class="callout" style="left:70%;top:54%;"><strong>Length</strong>12.00 m (shown while drawing)</div>
+      <div class="hud">Wall tool: click start, click end (chains). Esc to stop.</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

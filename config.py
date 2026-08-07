@@ -10,6 +10,9 @@ import os
 class Config:
     """Base configuration."""
     # IFC /ifc-geometry: IFC_GEOMETRY_CACHE, IFC_GEOMETRY_GZIP, IFC_FAST_GEOMETRY — see api/ifc_route.py.
+    # Speckle live BIM (api/speckle_route.py): SPECKLE_SERVER_URL (default
+    # https://app.speckle.systems), SPECKLE_TOKEN (PAT, scope streams:read),
+    # SPECKLE_GEOMETRY_CACHE. A per-project token can also be saved via the link API.
     SECRET_KEY          = os.environ.get("SECRET_KEY", "veritas-dev-secret-key-2026")
     DEBUG               = False
     TESTING             = False

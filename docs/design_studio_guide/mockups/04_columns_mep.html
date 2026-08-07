@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Design Studio — Columns & MEP</title>
+<link rel="stylesheet" href="shared.css"/>
+</head>
+<body>
+<div class="frame">
+  <div class="topbar"><strong>Design Studio</strong><span class="spacer"></span><button class="btn primary">Save</button></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="group"><h3>Draw tools</h3><div class="tools"><div class="tool">Select</div><div class="tool">Wall</div><div class="tool">Column</div><div class="tool">Door</div><div class="tool">Window</div><div class="tool on">MEP run</div></div></div>
+      <div class="group"><h3>MEP defaults</h3><p class="muted">Type: Duct · Size: 0.40 m</p><p class="muted" style="margin-top:4px">Height above floor: 2.80 m</p></div>
+    </aside>
+    <main class="stage">
+      <div class="grid-bg"></div>
+      <div class="perimeter" style="left:12%;top:16%;width:76%;height:68%;"></div>
+      <div class="col" style="left:12%;top:16%;width:14px;height:14px;"></div>
+      <div class="col" style="left:88%;top:16%;width:14px;height:14px;margin-left:-14px;"></div>
+      <div class="col" style="left:12%;top:84%;width:14px;height:14px;margin-top:-14px;"></div>
+      <div class="col" style="left:88%;top:84%;width:14px;height:14px;margin-left:-14px;margin-top:-14px;"></div>
+      <div class="mep-duct" style="left:16%;top:30%;width:68%;"></div>
+      <div class="mep-duct" style="left:16%;top:30%;width:0;height:0;transform:rotate(90deg);width:40%;"></div>
+      <div class="mep-pipe" style="left:20%;top:55%;width:60%;"></div>
+      <div class="callout" style="left:14%;top:6%;"><strong>Column tool</strong>Click once to place a structural column at the grid point.</div>
+      <div class="callout" style="left:48%;top:24%;"><strong>MEP run</strong>Click to add points along a duct or pipe path. Double-click or Esc to finish.</div>
+      <div class="legend"><div><i style="background:#4a90e2"></i>Column</div><div><i style="background:#f59e0b;border-top:3px dashed #f59e0b;height:0"></i>Duct</div><div><i style="background:#3b82f6"></i>Pipe</div></div>
+      <div class="hud">MEP: click points · double-click to finish · Select to drag vertices or whole run</div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

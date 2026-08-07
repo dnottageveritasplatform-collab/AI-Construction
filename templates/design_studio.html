@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Design Studio — Veritas AI Construction</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+<style>
+    :root{
+        --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#2d333b;
+        --text:#e6edf3; --muted:#8b949e; --accent:#4a90e2; --accent2:#3a6fb5;
+        --ok:#3fb950; --warn:#f59e0b; --wall:#c9d1d9; --win:#4aa3ff; --door:#c08552; --col:#4a90e2;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+    .topbar{height:52px;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--border);}
+    .topbar h1{font-size:15px;font-weight:600;white-space:nowrap;}
+    .topbar select,.topbar input{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;}
+    .topbar .spacer{flex:1;}
+    .topbar a{color:var(--accent);text-decoration:none;font-size:13px;}
+    .topbar button{cursor:pointer;border:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;}
+    .btn-primary{background:var(--accent);color:#fff;} .btn-primary:hover{background:var(--accent2);}
+    .btn-ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border)!important;} .btn-ghost:hover{border-color:var(--accent)!important;}
+    .layout{display:flex;height:calc(100vh - 52px);}
+    .sidebar{width:280px;min-width:280px;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:14px;}
+    .stage{flex:1;position:relative;}
+    canvas{display:block;width:100%;height:100%;}
+    #view3d{display:none;}
+    .group{margin-bottom:16px;}
+    .group h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;}
+    label{display:block;font-size:11px;color:var(--muted);margin:7px 0 3px;}
+    input[type=number],input[type=text],select{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;}
+    .row{display:flex;gap:8px;} .row>div{flex:1;}
+    .tools{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+    .tool{padding:9px 6px;font-size:12px;text-align:center;background:var(--panel2);border:1px solid var(--border);border-radius:6px;cursor:pointer;}
+    .tool.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .storeyList{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
+    .storeyItem{display:flex;align-items:center;gap:6px;padding:7px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;}
+    .storeyItem.active{border-color:var(--accent);background:#1b2a3f;}
+    .storeyItem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .miniBtns{display:flex;gap:6px;flex-wrap:wrap;}
+    .miniBtns button{flex:1;min-width:60px;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:6px;padding:6px;font-size:11px;}
+    .miniBtns button:hover{border-color:var(--accent);}
+    .viewtabs{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:0;z-index:6;background:rgba(22,27,34,.9);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .viewtabs button{padding:7px 18px;font-size:13px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-weight:600;}
+    .viewtabs button.active{background:var(--accent);color:#fff;}
+    .phases{position:absolute;top:12px;left:12px;display:flex;gap:5px;flex-wrap:wrap;z-index:6;}
+    .phases button{padding:5px 9px;font-size:11px;background:rgba(22,27,34,.9);color:var(--muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;}
+    .phases button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .hud{position:absolute;bottom:12px;left:12px;font-size:11px;color:var(--muted);background:rgba(22,27,34,.9);padding:6px 10px;border-radius:6px;z-index:6;max-width:60%;}
+    .legend{position:absolute;bottom:12px;right:12px;font-size:11px;color:var(--muted);background:rgba(22,27,34,.9);padding:8px 10px;border-radius:6px;z-index:6;line-height:1.7;}
+    .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+    .status{font-size:12px;margin-top:8px;min-height:15px;}
+    .status.ok{color:var(--ok);} .status.err{color:var(--warn);}
+    .chk{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:var(--muted);}
+    .chk input{width:auto;}
+    .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+    <h1>🏗️ Design Studio</h1>
+    <select id="projectSel" title="Active project"></select>
+    <input id="name" type="text" style="width:170px" placeholder="Design name" />
+    <span class="spacer"></span>
+    <button class="btn-ghost" id="saveBtn">💾 Save</button>
+    <button class="btn-ghost" id="ifcBtn">⬇ Export IFC</button>
+    <button class="btn-ghost" id="speckleBtn">☁ Speckle</button>
+    <a href="/dashboard" id="navLinkDashboard">← Dashboard</a>
+</div>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="group">
+            <h3>Template</h3>
+            <select id="presetSel"><option value="">— Start blank —</option></select>
+            <div class="hint">Loading a template replaces the current plan with editable perimeter walls.</div>
+        </div>
+
+        <div class="group">
+            <h3>Storeys</h3>
+            <div class="storeyList" id="storeyList"></div>
+            <div class="miniBtns">
+                <button id="addStoreyBtn">+ Add</button>
+                <button id="dupStoreyBtn">Duplicate</button>
+                <button id="delStoreyBtn">Delete</button>
+            </div>
+            <label>Active storey name</label>
+            <input id="storeyName" type="text" />
+            <div class="row">
+                <div><label>Height (m)</label><input id="storeyHeight" type="number" step="0.1" value="3.5" /></div>
+                <div><label>Slab (m)</label><input id="storeySlab" type="number" step="0.05" value="0.3" /></div>
+            </div>
+        </div>
+
+        <div class="group">
+            <h3>Draw tools</h3>
+            <div class="tools" id="tools">
+                <div class="tool active" data-tool="select">▣ Select / Move</div>
+                <div class="tool" data-tool="wall">／ Wall</div>
+                <div class="tool" data-tool="column">▪ Column</div>
+                <div class="tool" data-tool="door">🚪 Door</div>
+                <div class="tool" data-tool="window">⊞ Window</div>
+                <div class="tool" data-tool="mep">≈ MEP run</div>
+                <div class="tool" data-tool="delete">✕ Delete</div>
+            </div>
+            <div class="chk"><input id="snapChk" type="checkbox" checked /><label style="margin:0;">Snap to 0.5 m grid</label></div>
+            <div class="chk"><input id="roomChk" type="checkbox" checked /><label style="margin:0;">Auto-detect rooms</label></div>
+        </div>
+
+        <div class="group" id="mepProps">
+            <h3>MEP run defaults</h3>
+            <div class="row">
+                <div><label>Type</label><select id="mepKind"><option value="duct">Duct</option><option value="pipe">Pipe</option></select></div>
+                <div><label>Size (m)</label><input id="mepSize" type="number" step="0.05" value="0.4" /></div>
+            </div>
+            <label>Height above floor (m)</label>
+            <input id="mepHeight" type="number" step="0.1" value="2.8" />
+            <div class="hint">Click to add points; double-click or Esc to finish a run.</div>
+        </div>
+
+        <div class="group" id="roomProps" style="display:none">
+            <h3>Selected room</h3>
+            <label>Name</label>
+            <input id="roomName" type="text" />
+            <label>Type</label>
+            <select id="roomType">
+                <option value="">— unset —</option>
+                <option>Living</option><option>Kitchen</option><option>Bedroom</option>
+                <option>Bathroom</option><option>Office</option><option>Corridor</option>
+                <option>Storage</option><option>Lobby</option><option>Meeting</option>
+                <option>Mechanical</option><option>Retail</option><option>Other</option>
+            </select>
+            <div class="hint" id="roomArea"></div>
+        </div>
+
+        <div class="group" id="wallProps">
+            <h3>Wall defaults</h3>
+            <label>Wall thickness (m)</label>
+            <input id="wallThk" type="number" step="0.05" value="0.2" />
+            <label style="margin-top:10px">Door width / height (m)</label>
+            <div class="row">
+                <div><input id="doorW" type="number" step="0.05" value="1.1" title="Door width" /></div>
+                <div><input id="doorH" type="number" step="0.05" value="2.1" title="Door height" /></div>
+            </div>
+            <label style="margin-top:8px">Window width / height (m)</label>
+            <div class="row">
+                <div><input id="opW" type="number" step="0.1" value="1.5" title="Window width" /></div>
+                <div><input id="opH" type="number" step="0.1" value="1.5" title="Window height" /></div>
+            </div>
+            <label>Window sill height (m)</label>
+            <input id="opSill" type="number" step="0.1" value="1.0" />
+        </div>
+
+        <div class="group">
+            <h3>Building</h3>
+            <div class="row">
+                <div><label>Found. depth</label><input id="foundDepth" type="number" step="0.1" value="0.6" /></div>
+                <div><label>Found. margin</label><input id="foundMargin" type="number" step="0.1" value="0.6" /></div>
+            </div>
+            <label>Roof</label>
+            <select id="roofType">
+                <option value="flat">Flat</option>
+                <option value="parapet">Flat + Parapet</option>
+                <option value="gable">Gable</option>
+                <option value="none">None</option>
+            </select>
+            <div class="row">
+                <div><label>Parapet (m)</label><input id="parapet" type="number" step="0.1" value="0.6" /></div>
+                <div><label>Ridge (m)</label><input id="ridge" type="number" step="0.1" value="2.0" /></div>
+            </div>
+            <div class="status" id="status"></div>
+            <div class="hint">Saved designs render in the dashboard 3D viewer. Export IFC to use the design in Revit/Blender or this app's IFC pipeline.</div>
+        </div>
+    </aside>
+
+    <main class="stage">
+        <div class="viewtabs">
+            <button id="tab2d" class="active">2D Plan</button>
+            <button id="tab3d">3D View</button>
+        </div>
+        <div class="phases" id="phases" style="display:none">
+            <button data-phase="" class="active">All</button>
+            <button data-phase="foundation">Foundation</button>
+            <button data-phase="structure">Structure</button>
+            <button data-phase="mep">MEP</button>
+            <button data-phase="cladding">Cladding</button>
+            <button data-phase="finishing">Finishing</button>
+        </div>
+        <canvas id="plan"></canvas>
+        <canvas id="view3d"></canvas>
+        <div class="hud" id="hud">Wall tool: click start, click end (chains). Esc to stop. Scroll = zoom, right-drag = pan.</div>
+        <div class="legend">
+            <div><i style="background:var(--wall)"></i>Wall</div>
+            <div><i style="background:var(--win)"></i>Window</div>
+            <div><i style="background:var(--door)"></i>Door</div>
+            <div><i style="background:var(--col)"></i>Column</div>
+            <div><i style="background:#f59e0b"></i>Duct</div>
+            <div><i style="background:#3b82f6"></i>Pipe</div>
+            <div id="roomReadout" style="color:#7ee0a0"></div>
+        </div>
+    </main>
+</div>
+
+<script src="/static/js/project_context.js"></script>
+<script src="/static/js/three.min.js"></script>
+<script>
+(function(){
+    "use strict";
+    const $ = id => document.getElementById(id);
+    const CURRENT_USER_ID = "usr-001";
+    const _spInit = new URLSearchParams(location.search);
+    let PROJECT_ID =
+        (window.VeritasProjectContext?.parseFromUrl(_spInit)) ||
+        (window.VeritasProjectContext?.readPersisted()) ||
+        "";
+    let doc = blankDoc();
+    let activeStorey = 0;
+    let tool = "select";
+    let selection = null;       // {kind:'wall'|'column'|'mep', id}
+    let pending = null;         // wall drawing: {x,y}
+    let pendingMep = null;      // mep drawing: {kind,size,height,points:[[x,y]...]}
+    let dragState = null;       // {kind, ...} while moving an element
+    let leftDown = false;
+    let mouseW = {x:0,y:0};
+    let view = "2d";
+    let activePhase = "";
+    let nextId = 1;
+    const GRID = 0.5;
+
+    function uid(p){ return p + (nextId++) + "_" + Math.random().toString(36).slice(2,6); }
+    function blankDoc(){
+        return { version:2, name:"Building Design", default_wall:{thickness:0.2,height:3.0},
+                 foundation:{depth:0.6,margin:0.6}, roof:{type:"flat",parapet:0.6,ridge_height:2.0},
+                 storeys:[{ id:"s1", name:"Ground Floor", height:3.5, slab_thickness:0.3, walls:[], columns:[], mep:[], rooms:[] }] };
+    }
+    function ensureArrays(s){ s.walls=s.walls||[]; s.columns=s.columns||[]; s.mep=s.mep||[]; s.rooms=s.rooms||[]; s.room_labels=s.room_labels||[]; return s; }
+    function storey(){ return ensureArrays(doc.storeys[activeStorey]); }
+    function setStatus(m,c){ const e=$("status"); e.textContent=m||""; e.className="status "+(c||""); }
+
+    /* ───────── room auto-detection (planar faces of the wall graph) ───────── */
+    function detectRooms(s){
+        const walls=(s.walls||[]).filter(w=>Math.hypot(w.x2-w.x1,w.y2-w.y1)>0.05);
+        if(walls.length<3) return [];
+        const nodes=[]; const idxOf=new Map();
+        const nkey=(x,y)=>Math.round(x*1000)+"_"+Math.round(y*1000);
+        function node(x,y){ const k=nkey(x,y); if(idxOf.has(k))return idxOf.get(k); const i=nodes.length; nodes.push({x,y,nb:[]}); idxOf.set(k,i); return i; }
+        const edgeSet=new Set();
+        walls.forEach(w=>{ const a=node(w.x1,w.y1), b=node(w.x2,w.y2); if(a===b)return; const ek=a<b?a+"_"+b:b+"_"+a; if(edgeSet.has(ek))return; edgeSet.add(ek); nodes[a].nb.push(b); nodes[b].nb.push(a); });
+        // sort neighbours CCW by angle
+        nodes.forEach((n,i)=>{ n.nb.sort((p,q)=>Math.atan2(nodes[p].y-n.y,nodes[p].x-n.x)-Math.atan2(nodes[q].y-n.y,nodes[q].x-n.x)); });
+        const visited=new Set(); const ek=(a,b)=>a+"|"+b; const faces=[];
+        for(let u=0;u<nodes.length;u++) for(const v of nodes[u].nb){
+            if(visited.has(ek(u,v))) continue;
+            const face=[]; let a=u,b=v; let guard=0;
+            while(!visited.has(ek(a,b)) && guard++<10000){
+                visited.add(ek(a,b)); face.push(a);
+                const nb=nodes[b].nb; const i=nb.indexOf(a); const w=nb[(i-1+nb.length)%nb.length];
+                a=b; b=w;
+            }
+            if(face.length>=3) faces.push(face);
+        }
+        const rooms=[];
+        faces.forEach(face=>{
+            let area2=0, cxs=0, cys=0;
+            const poly=face.map(i=>[nodes[i].x,nodes[i].y]);
+            for(let i=0;i<poly.length;i++){ const [x1,y1]=poly[i], [x2,y2]=poly[(i+1)%poly.length]; const cr=x1*y2-x2*y1; area2+=cr; cxs+=(x1+x2)*cr; cys+=(y1+y2)*cr; }
+            const area=area2/2;
+            if(area>0.5){   // CCW interior face
+                const cx=cxs/(3*area2), cy=cys/(3*area2);
+                rooms.push({ id:uid("r"), name:"Room "+(rooms.length+1), type:"", poly, area:Math.round(area*100)/100, cx, cy });
+            }
+        });
+        return rooms;
+    }
+    function polyCentroid(poly){ let a2=0,cx=0,cy=0; for(let i=0;i<poly.length;i++){ const [x1,y1]=poly[i],[x2,y2]=poly[(i+1)%poly.length]; const cr=x1*y2-x2*y1; a2+=cr; cx+=(x1+x2)*cr; cy+=(y1+y2)*cr; } if(Math.abs(a2)<1e-9){ const n=poly.length||1; return [poly.reduce((s,p)=>s+p[0],0)/n, poly.reduce((s,p)=>s+p[1],0)/n]; } return [cx/(3*a2), cy/(3*a2)]; }
+    function pointInPoly(x,y,poly){ let inside=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1]; if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-9)+xi)) inside=!inside; } return inside; }
+    function roomHit(wx,wy){ const rs=storey().rooms||[]; for(let i=rs.length-1;i>=0;i--){ if(rs[i].poly && pointInPoly(wx,wy,rs[i].poly)) return rs[i]; } return null; }
+    function applyRoomLabels(s){ const labels=s.room_labels||[]; (s.rooms||[]).forEach(r=>{ let best=null,bd=1.5; labels.forEach(l=>{ const d=Math.hypot((l.cx??0)-r.cx,(l.cy??0)-r.cy); if(d<bd){bd=d;best=l;} }); if(best){ r.name=best.name; r.type=best.type||""; } }); }
+    function setRoomLabel(s,room){ s.room_labels=s.room_labels||[]; let best=null,bd=1.5; s.room_labels.forEach(l=>{ const d=Math.hypot(l.cx-room.cx,l.cy-room.cy); if(d<bd){bd=d;best=l;} }); if(best){ best.name=room.name; best.type=room.type; best.cx=room.cx; best.cy=room.cy; } else s.room_labels.push({cx:room.cx,cy:room.cy,name:room.name,type:room.type}); }
+    function seedLabelsFromRooms(s){ ensureArrays(s); s.room_labels=[]; (s.rooms||[]).forEach(r=>{ const c=(r.cx!=null&&r.cy!=null)?[r.cx,r.cy]:polyCentroid(r.poly||[[0,0]]); if(r.name && (r.name!=="" )){ s.room_labels.push({cx:c[0],cy:c[1],name:r.name,type:r.type||""}); } }); }
+    function recomputeRooms(s){ s=ensureArrays(s); if($("roomChk").checked){ s.rooms=detectRooms(s); applyRoomLabels(s); } else s.rooms=[]; updateRoomReadout(); }
+    function updateRoomReadout(){ const s=storey(); const rs=(s.rooms||[]); const tot=rs.reduce((a,r)=>a+(r.area||0),0); $("roomReadout").textContent = rs.length? (rs.length+" room"+(rs.length>1?"s":"")+" · "+tot.toFixed(1)+" m²") : ""; }
+    function recomputeAllRooms(){ const keep=$("roomChk").checked; doc.storeys.forEach(s=>{ ensureArrays(s); if(keep){ s.rooms=detectRooms(s); applyRoomLabels(s); } else s.rooms=[]; }); updateRoomReadout(); }
+
+    /* ───────── 2D canvas + camera ───────── */
+    const plan = $("plan");
+    const g = plan.getContext("2d");
+    let cam = { scale: 14, cx: 0, cy: 0 };   // px per metre, world centre
+    function W(){ return plan.width; } function H(){ return plan.height; }
+    function w2s(x,y){ return [ W()/2 + (x-cam.cx)*cam.scale, H()/2 - (y-cam.cy)*cam.scale ]; }
+    function s2w(px,py){ return [ cam.cx + (px-W()/2)/cam.scale, cam.cy - (py-H()/2)/cam.scale ]; }
+    function snap(v){ return $("snapChk").checked ? Math.round(v/GRID)*GRID : Math.round(v*1000)/1000; }
+    function resizePlan(){
+        const r = plan.getBoundingClientRect();
+        if(plan.width!==Math.round(r.width)||plan.height!==Math.round(r.height)){ plan.width=Math.round(r.width); plan.height=Math.round(r.height); }
+    }
+
+    function render2D(){
+        resizePlan();
+        g.fillStyle="#0d1117"; g.fillRect(0,0,W(),H());
+        // grid
+        const stepW = GRID; const [ox,oy]=w2s(0,0);
+        g.lineWidth=1;
+        const left=s2w(0,0), right=s2w(W(),H());
+        let gx0=Math.floor(left[0]/stepW)*stepW, gx1=Math.ceil(right[0]/stepW)*stepW;
+        let gy0=Math.floor(right[1]/stepW)*stepW, gy1=Math.ceil(left[1]/stepW)*stepW;
+        if((gx1-gx0)/stepW < 400){
+            g.strokeStyle="rgba(100,160,220,0.06)";
+            for(let x=gx0;x<=gx1;x+=stepW){ const a=w2s(x,gy0),b=w2s(x,gy1); g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke(); }
+            for(let y=gy0;y<=gy1;y+=stepW){ const a=w2s(gx0,y),b=w2s(gx1,y); g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke(); }
+        }
+        // axes
+        g.strokeStyle="rgba(120,180,240,0.25)";
+        g.beginPath(); g.moveTo(0,oy); g.lineTo(W(),oy); g.moveTo(ox,0); g.lineTo(ox,H()); g.stroke();
+
+        const st = storey();
+        // rooms (under everything)
+        (st.rooms||[]).forEach(r=>{
+            if(!r.poly||r.poly.length<3) return;
+            g.beginPath(); const p0=w2s(r.poly[0][0],r.poly[0][1]); g.moveTo(p0[0],p0[1]);
+            for(let i=1;i<r.poly.length;i++){ const p=w2s(r.poly[i][0],r.poly[i][1]); g.lineTo(p[0],p[1]); }
+            const selR = selection&&selection.kind==='room'&&selection.id===r.id;
+            g.closePath(); g.fillStyle= selR ? "rgba(126,224,160,0.22)" : "rgba(126,224,160,0.10)"; g.fill();
+            if(selR){ g.strokeStyle="#7ee0a0"; g.lineWidth=1.5; g.stroke(); }
+            const c=w2s(r.cx,r.cy); g.fillStyle="#7ee0a0"; g.font="12px Segoe UI"; g.textAlign="center";
+            const lbl = r.type ? (r.name+" · "+r.type) : r.name;
+            g.fillText(lbl, c[0], c[1]-2); g.fillText((r.area||0).toFixed(1)+" m²", c[0], c[1]+13); g.textAlign="left";
+        });
+        // mep runs
+        (st.mep||[]).forEach(run=>{
+            const pts=run.points||[]; if(pts.length<2) return;
+            g.strokeStyle = run.kind==='pipe' ? "#3b82f6" : "#f59e0b";
+            g.lineWidth=Math.max(2, run.size*cam.scale*0.8); g.setLineDash([2,3]); g.lineCap="round";
+            g.beginPath(); const a=w2s(pts[0][0],pts[0][1]); g.moveTo(a[0],a[1]);
+            for(let i=1;i<pts.length;i++){ const p=w2s(pts[i][0],pts[i][1]); g.lineTo(p[0],p[1]); }
+            g.stroke(); g.setLineDash([]);
+            if(selection&&selection.kind==='mep'&&selection.id===run.id){ g.strokeStyle="#ffd166"; g.lineWidth=1.5; g.stroke(); }
+        });
+        // walls
+        st.walls.forEach(wall=>{
+            drawWall(wall, selection&&selection.kind==='wall'&&selection.id===wall.id);
+        });
+        // columns
+        st.columns.forEach(c=>{
+            const [px,py]=w2s(c.x,c.y); const s=c.size*cam.scale;
+            g.fillStyle = (selection&&selection.kind==='column'&&selection.id===c.id)?"#ffd166":"#4a90e2";
+            g.fillRect(px-s/2,py-s/2,Math.max(4,s),Math.max(4,s));
+            g.strokeStyle="#0d1117"; g.strokeRect(px-s/2,py-s/2,Math.max(4,s),Math.max(4,s));
+        });
+        // pending wall rubber
+        if(pending){
+            const a=w2s(pending.x,pending.y), b=w2s(mouseW.x,mouseW.y);
+            g.strokeStyle="rgba(74,144,226,0.8)"; g.lineWidth=2; g.setLineDash([6,4]);
+            g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke(); g.setLineDash([]);
+            const len=Math.hypot(mouseW.x-pending.x,mouseW.y-pending.y);
+            g.fillStyle="#e6edf3"; g.font="12px Segoe UI";
+            g.fillText(len.toFixed(2)+" m", (a[0]+b[0])/2+6, (a[1]+b[1])/2-6);
+        }
+        // pending MEP run
+        if(pendingMep && pendingMep.points.length){
+            g.strokeStyle = pendingMep.kind==='pipe' ? "#3b82f6" : "#f59e0b"; g.lineWidth=2; g.setLineDash([2,3]);
+            g.beginPath(); const a=w2s(pendingMep.points[0][0],pendingMep.points[0][1]); g.moveTo(a[0],a[1]);
+            for(let i=1;i<pendingMep.points.length;i++){ const p=w2s(pendingMep.points[i][0],pendingMep.points[i][1]); g.lineTo(p[0],p[1]); }
+            const m=w2s(snap(mouseW.x),snap(mouseW.y)); g.lineTo(m[0],m[1]); g.stroke(); g.setLineDash([]);
+        }
+        // cursor crosshair (snapped)
+        const sp=snap(mouseW.x), spy=snap(mouseW.y); const [cpx,cpy]=w2s(sp,spy);
+        g.strokeStyle="rgba(63,185,80,0.6)"; g.lineWidth=1;
+        g.beginPath();g.arc(cpx,cpy,4,0,Math.PI*2);g.stroke();
+    }
+    function drawWall(wall, sel){
+        const a=w2s(wall.x1,wall.y1), b=w2s(wall.x2,wall.y2);
+        const t=Math.max(3, wall.thickness*cam.scale);
+        g.strokeStyle = sel ? "#ffd166" : "#c9d1d9"; g.lineWidth=t; g.lineCap="butt";
+        g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
+        // openings
+        const L=Math.hypot(wall.x2-wall.x1,wall.y2-wall.y1)||1;
+        (wall.openings||[]).forEach(o=>{
+            const cx=wall.x1+(wall.x2-wall.x1)*o.center, cy=wall.y1+(wall.y2-wall.y1)*o.center;
+            const dirx=(wall.x2-wall.x1)/L, diry=(wall.y2-wall.y1)/L;
+            const half=o.width/2;
+            const p1=w2s(cx-dirx*half, cy-diry*half), p2=w2s(cx+dirx*half, cy+diry*half);
+            g.strokeStyle = o.kind==='door' ? "#c08552" : "#4aa3ff"; g.lineWidth=Math.max(3,t*0.9);
+            g.beginPath();g.moveTo(p1[0],p1[1]);g.lineTo(p2[0],p2[1]);g.stroke();
+        });
+    }
+
+    /* ───────── hit testing ───────── */
+    function segDist(px,py,x1,y1,x2,y2){
+        const dx=x2-x1, dy=y2-y1; const L2=dx*dx+dy*dy||1e-9;
+        let t=((px-x1)*dx+(py-y1)*dy)/L2; t=Math.max(0,Math.min(1,t));
+        const cx=x1+t*dx, cy=y1+t*dy; return {d:Math.hypot(px-cx,py-cy), t};
+    }
+    function hitWall(wx,wy){
+        let best=null; const tol=Math.max(0.25, 8/cam.scale);
+        storey().walls.forEach(wall=>{
+            const r=segDist(wx,wy,wall.x1,wall.y1,wall.x2,wall.y2);
+            const t=Math.max(wall.thickness/1.5, tol);
+            if(r.d<t && (!best||r.d<best.d)) best={wall,t:r.t,d:r.d};
+        });
+        return best;
+    }
+    function hitColumn(wx,wy){
+        let best=null;
+        storey().columns.forEach(c=>{
+            const d=Math.max(Math.abs(wx-c.x),Math.abs(wy-c.y));
+            const tol=Math.max(c.size, 8/cam.scale);
+            if(d<tol && (!best||d<best.d)) best={col:c,d};
+        });
+        return best;
+    }
+    function hitMep(wx,wy){
+        let best=null; const tol=Math.max(0.3, 8/cam.scale);
+        (storey().mep||[]).forEach(run=>{
+            const p=run.points||[]; for(let i=0;i<p.length-1;i++){ const r=segDist(wx,wy,p[i][0],p[i][1],p[i+1][0],p[i+1][1]); if(r.d<tol && (!best||r.d<best.d)) best={run,d:r.d}; }
+        });
+        return best;
+    }
+    function wallEndpointHit(wx,wy){
+        const tol=Math.max(0.4, 10/cam.scale); let best=null;
+        storey().walls.forEach(w=>{
+            const d1=Math.hypot(wx-w.x1,wy-w.y1), d2=Math.hypot(wx-w.x2,wy-w.y2);
+            if(d1<tol && (!best||d1<best.d)) best={wall:w,end:1,d:d1};
+            if(d2<tol && (!best||d2<best.d)) best={wall:w,end:2,d:d2};
+        });
+        return best;
+    }
+    function openingHit(wx,wy){
+        const tol=Math.max(0.3, 8/cam.scale); let best=null;
+        storey().walls.forEach(w=>{
+            const L=Math.hypot(w.x2-w.x1,w.y2-w.y1)||1; const r=segDist(wx,wy,w.x1,w.y1,w.x2,w.y2);
+            if(r.d>Math.max(w.thickness, tol)) return;
+            (w.openings||[]).forEach(o=>{ if(Math.abs(o.center-r.t)*L < o.width/2 + 0.15){ const d=Math.abs(o.center-r.t)*L; if(!best||d<best.d) best={wall:w,opening:o,d}; } });
+        });
+        return best;
+    }
+    function mepVertexHit(wx,wy){
+        const tol=Math.max(0.35, 9/cam.scale); let best=null;
+        (storey().mep||[]).forEach(run=>{ (run.points||[]).forEach((p,i)=>{ const d=Math.hypot(wx-p[0],wy-p[1]); if(d<tol && (!best||d<best.d)) best={run,idx:i,d}; }); });
+        return best;
+    }
+
+    /* ───────── interactions ───────── */
+    plan.addEventListener("contextmenu", e=>e.preventDefault());
+    let panning=false, lpx=0, lpy=0;
+    plan.addEventListener("mousedown", e=>{
+        const rect=plan.getBoundingClientRect(); const px=e.clientX-rect.left, py=e.clientY-rect.top;
+        if(e.button===2 || e.button===1){ panning=true; lpx=px; lpy=py; return; }
+        if(e.button===0) leftDown=true;
+        const [wx,wy]=s2w(px,py); const sx=snap(wx), sy=snap(wy);
+        if(tool==="wall"){
+            if(!pending){ pending={x:sx,y:sy}; }
+            else{
+                if(Math.hypot(sx-pending.x,sy-pending.y)>0.05){
+                    storey().walls.push({id:uid("w"),x1:pending.x,y1:pending.y,x2:sx,y2:sy,thickness:+$("wallThk").value,openings:[]});
+                    pending={x:sx,y:sy}; markDirty();
+                }
+            }
+        } else if(tool==="mep"){
+            if(!pendingMep) pendingMep={kind:$("mepKind").value,size:+$("mepSize").value,height:+$("mepHeight").value,points:[[sx,sy]]};
+            else pendingMep.points.push([sx,sy]);
+        } else if(tool==="column"){
+            storey().columns.push({id:uid("c"),x:sx,y:sy,size:0.4}); markDirty();
+        } else if(tool==="door"||tool==="window"){
+            const h=hitWall(wx,wy);
+            if(h){
+                h.wall.openings=h.wall.openings||[];
+                h.wall.openings.push({ id:uid("o"), kind:tool, center:Math.max(0.05,Math.min(0.95,h.t)),
+                    width: tool==="door" ? +$("doorW").value : +$("opW").value,
+                    height: tool==="door" ? +$("doorH").value : +$("opH").value,
+                    sill: tool==="door"?0:+$("opSill").value });
+                markDirty();
+            } else setStatus("Click on a wall to place a "+tool+".","err");
+        } else if(tool==="select"){
+            // begin a drag on whatever is under the cursor (most specific first)
+            const he=wallEndpointHit(wx,wy); const mv=mepVertexHit(wx,wy); const hc=hitColumn(wx,wy);
+            const op=openingHit(wx,wy); const hm=hitMep(wx,wy); const hw=hitWall(wx,wy);
+            if(he){ selection={kind:"wall",id:he.wall.id}; dragState={kind:"wall-end",wall:he.wall,end:he.end}; }
+            else if(mv){ selection={kind:"mep",id:mv.run.id}; dragState={kind:"mep-vertex",run:mv.run,idx:mv.idx}; }
+            else if(hc){ selection={kind:"column",id:hc.col.id}; dragState={kind:"column",col:hc.col}; }
+            else if(op){ selection={kind:"wall",id:op.wall.id}; dragState={kind:"opening",wall:op.wall,opening:op.opening}; }
+            else if(hm){ selection={kind:"mep",id:hm.run.id}; dragState={kind:"mep-move",run:hm.run,sx,sy,orig:hm.run.points.map(p=>[p[0],p[1]])}; }
+            else if(hw){ selection={kind:"wall",id:hw.wall.id}; dragState={kind:"wall-move",wall:hw.wall,sx,sy,ox1:hw.wall.x1,oy1:hw.wall.y1,ox2:hw.wall.x2,oy2:hw.wall.y2}; }
+            else { const r=roomHit(wx,wy); if(r){ selection={kind:"room",id:r.id}; } else selection=null; dragState=null; }
+            syncSelProps();
+        } else if(tool==="delete"){
+            deleteAt(wx,wy);
+        }
+        render2D();
+    });
+    plan.addEventListener("dblclick", ()=>{ finishMep(); });
+    function finishMep(){
+        if(pendingMep){
+            if(pendingMep.points.length>=2){ storey().mep.push({id:uid("m"),kind:pendingMep.kind,size:pendingMep.size,height:pendingMep.height,points:pendingMep.points}); markDirty(); }
+            pendingMep=null; render2D();
+        }
+    }
+    window.addEventListener("mousemove", e=>{
+        const rect=plan.getBoundingClientRect(); const px=e.clientX-rect.left, py=e.clientY-rect.top;
+        if(panning){ cam.cx -= (px-lpx)/cam.scale; cam.cy += (py-lpy)/cam.scale; lpx=px; lpy=py; if(view==="2d") render2D(); return; }
+        [mouseW.x,mouseW.y]=s2w(px,py);
+        if(leftDown && tool==="select" && dragState){
+            const sx=snap(mouseW.x), sy=snap(mouseW.y);
+            if(dragState.kind==="column"){ dragState.col.x=sx; dragState.col.y=sy; }
+            else if(dragState.kind==="wall-end"){ const w=dragState.wall; if(dragState.end===1){w.x1=sx;w.y1=sy;}else{w.x2=sx;w.y2=sy;} }
+            else if(dragState.kind==="wall-move"){ const dx=sx-dragState.sx, dy=sy-dragState.sy; const w=dragState.wall; w.x1=dragState.ox1+dx; w.y1=dragState.oy1+dy; w.x2=dragState.ox2+dx; w.y2=dragState.oy2+dy; }
+            else if(dragState.kind==="opening"){ const w=dragState.wall; const r=segDist(mouseW.x,mouseW.y,w.x1,w.y1,w.x2,w.y2); dragState.opening.center=Math.max(0.03,Math.min(0.97,r.t)); }
+            else if(dragState.kind==="mep-vertex"){ dragState.run.points[dragState.idx]=[sx,sy]; }
+            else if(dragState.kind==="mep-move"){ const dx=sx-dragState.sx, dy=sy-dragState.sy; dragState.run.points=dragState.orig.map(p=>[p[0]+dx,p[1]+dy]); }
+            render2D(); return;
+        }
+        if(view==="2d") render2D();
+    });
+    window.addEventListener("mouseup", ()=>{ panning=false; if(leftDown && dragState){ dragState=null; markDirty(); } leftDown=false; });
+    plan.addEventListener("wheel", e=>{ e.preventDefault();
+        const rect=plan.getBoundingClientRect(); const px=e.clientX-rect.left, py=e.clientY-rect.top;
+        const before=s2w(px,py); cam.scale*= (e.deltaY<0?1.12:0.89); cam.scale=Math.max(2,Math.min(120,cam.scale));
+        const after=s2w(px,py); cam.cx+=before[0]-after[0]; cam.cy+=before[1]-after[1]; render2D();
+    },{passive:false});
+    window.addEventListener("keydown", e=>{
+        if(e.key==="Escape"){ pending=null; if(pendingMep) finishMep(); else { pendingMep=null; render2D(); } }
+        if((e.key==="Delete"||e.key==="Backspace") && selection){ removeSelection(); }
+    });
+    function deleteAt(wx,wy){
+        const hc=hitColumn(wx,wy);
+        const hw=hitWall(wx,wy);
+        const hm=hitMep(wx,wy);
+        // opening hit?
+        if(hw){
+            const wall=hw.wall; const L=Math.hypot(wall.x2-wall.x1,wall.y2-wall.y1)||1;
+            const tpos=hw.t;
+            const oi=(wall.openings||[]).findIndex(o=> Math.abs(o.center-tpos)*L < o.width/2 + 0.2 );
+            if(oi>=0 && (!hc || hw.d<hc.d)){ wall.openings.splice(oi,1); markDirty(); return; }
+        }
+        if(hm && (!hw||hm.d<hw.d) && (!hc||hm.d<hc.d)){ removeById("mep",hm.run.id); return; }
+        if(hc && (!hw || hc.d<hw.d)){ removeById("column",hc.col.id); return; }
+        if(hw){ removeById("wall",hw.wall.id); return; }
+    }
+    function removeSelection(){ if(selection){ if(selection.kind!=="room") removeById(selection.kind,selection.id); selection=null; syncSelProps(); render2D(); } }
+    function removeById(kind,id){
+        const st=storey();
+        if(kind==="wall") st.walls=st.walls.filter(w=>w.id!==id);
+        else if(kind==="mep") st.mep=st.mep.filter(m=>m.id!==id);
+        else st.columns=st.columns.filter(c=>c.id!==id);
+        markDirty();
+    }
+    function selectedRoom(){ if(!selection||selection.kind!=="room") return null; return (storey().rooms||[]).find(r=>r.id===selection.id)||null; }
+    function syncSelProps(){
+        if(selection&&selection.kind==="wall"){
+            const w=storey().walls.find(x=>x.id===selection.id);
+            if(w) $("wallThk").value=w.thickness;
+        }
+        const room=selectedRoom();
+        $("roomProps").style.display = room ? "block" : "none";
+        if(room){ $("roomName").value=room.name||""; $("roomType").value=room.type||""; $("roomArea").textContent=(room.area||0).toFixed(1)+" m²"; }
+    }
+    function applyRoomEdit(){ const room=selectedRoom(); if(!room) return; room.name=$("roomName").value||room.name; room.type=$("roomType").value||""; setRoomLabel(storey(), room); updateRoomReadout(); render2D(); }
+    $("roomName").addEventListener("input", applyRoomEdit);
+    $("roomType").addEventListener("change", applyRoomEdit);
+
+    /* ───────── tools / storeys / settings ───────── */
+    document.querySelectorAll("#tools .tool").forEach(t=>{
+        t.addEventListener("click",()=>{
+            document.querySelectorAll("#tools .tool").forEach(x=>x.classList.remove("active"));
+            t.classList.add("active"); tool=t.dataset.tool; pending=null;
+            $("hud").textContent = HELP[tool]||""; render2D();
+        });
+    });
+    const HELP={ select:"Click to select; drag a wall body, endpoint, or column to move it. Delete key removes.",
+        wall:"Click start, click end (chains). Esc to stop.",
+        column:"Click to place a column.",
+        door:"Click on a wall to add a door.",
+        window:"Click on a wall to add a window.",
+        mep:"Click to add points; double-click or Esc to finish the run.",
+        delete:"Click an element, opening, or MEP run to delete it." };
+
+    function renderStoreyList(){
+        const list=$("storeyList"); list.innerHTML="";
+        doc.storeys.forEach((s,i)=>{
+            const d=document.createElement("div"); d.className="storeyItem"+(i===activeStorey?" active":"");
+            d.innerHTML='<span class="nm">'+(s.name||("Level "+(i+1)))+'</span><span style="color:var(--muted)">'+(s.walls.length)+'w</span>';
+            d.addEventListener("click",()=>{ activeStorey=i; selection=null; pending=null; pendingMep=null; syncStoreyFields(); renderStoreyList(); recomputeRooms(storey()); syncSelProps(); render2D(); });
+            list.appendChild(d);
+        });
+    }
+    function syncStoreyFields(){
+        const s=storey(); $("storeyName").value=s.name; $("storeyHeight").value=s.height; $("storeySlab").value=s.slab_thickness;
+    }
+    $("storeyName").addEventListener("input",()=>{ storey().name=$("storeyName").value; renderStoreyList(); markDirty(false); });
+    $("storeyHeight").addEventListener("input",()=>{ storey().height=+$("storeyHeight").value||3; markDirty(false); });
+    $("storeySlab").addEventListener("input",()=>{ storey().slab_thickness=+$("storeySlab").value||0; markDirty(false); });
+    $("addStoreyBtn").addEventListener("click",()=>{ doc.storeys.push({id:uid("s"),name:"Level "+(doc.storeys.length+1),height:3.5,slab_thickness:0.3,walls:[],columns:[]}); activeStorey=doc.storeys.length-1; syncStoreyFields(); renderStoreyList(); render2D(); markDirty(false); });
+    $("dupStoreyBtn").addEventListener("click",()=>{ const s=JSON.parse(JSON.stringify(storey())); s.id=uid("s"); s.name="Level "+(doc.storeys.length+1); s.walls.forEach(w=>w.id=uid("w")); s.columns.forEach(c=>c.id=uid("c")); doc.storeys.push(s); activeStorey=doc.storeys.length-1; syncStoreyFields(); renderStoreyList(); render2D(); markDirty(false); });
+    $("delStoreyBtn").addEventListener("click",()=>{ if(doc.storeys.length<=1){ setStatus("At least one storey is required.","err"); return; } doc.storeys.splice(activeStorey,1); activeStorey=Math.max(0,activeStorey-1); syncStoreyFields(); renderStoreyList(); render2D(); markDirty(false); });
+
+    $("roomChk").addEventListener("change",()=>{ recomputeRooms(storey()); render2D(); });
+    $("name").addEventListener("input",()=>{ doc.name=$("name").value; markDirty(false); });
+    ["foundDepth","foundMargin","roofType","parapet","ridge"].forEach(id=>$(id).addEventListener("input",()=>{
+        doc.foundation={depth:+$("foundDepth").value||0, margin:+$("foundMargin").value||0};
+        doc.roof={type:$("roofType").value, parapet:+$("parapet").value||0, ridge_height:+$("ridge").value||0};
+        markDirty(false);
+    }));
+
+    function pushDocToFields(){
+        $("name").value=doc.name||"Building Design";
+        $("foundDepth").value=doc.foundation?.depth??0.6; $("foundMargin").value=doc.foundation?.margin??0.6;
+        $("roofType").value=doc.roof?.type??"flat"; $("parapet").value=doc.roof?.parapet??0.6; $("ridge").value=doc.roof?.ridge_height??2.0;
+        if(doc.default_wall?.thickness) $("wallThk").value=doc.default_wall.thickness;
+        syncStoreyFields(); renderStoreyList();
+    }
+
+    let dirty3d=true;
+    // "ifc" while the plan is an untouched import of the project's uploaded
+    // IFC files: the 3D view then shows the real per-stage BIM models (same as
+    // the dashboard viewer). Any edit switches to live plan-generated geometry.
+    let docSource="spec";
+    function markDirty(refresh=true){ dirty3d=true; docSource="spec"; recomputeRooms(storey()); if(view==="3d"&&refresh) refresh3D(); }
+
+    /* ───────── 3D view ───────── */
+    const c3=$("view3d");
+    let renderer,scene,camera,modelGroup=null, t3={theta:-0.7,phi:0.9,radius:60,tx:0,ty:0,tz:0};
+    function init3D(){
+        renderer=new THREE.WebGLRenderer({canvas:c3,antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+        scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d1117);
+        camera=new THREE.PerspectiveCamera(45,1,0.1,6000);
+        scene.add(new THREE.AmbientLight(0xffffff,0.55));
+        const d1=new THREE.DirectionalLight(0xffffff,0.85); d1.position.set(40,80,50); scene.add(d1);
+        const d2=new THREE.DirectionalLight(0x88aaff,0.3); d2.position.set(-40,30,-50); scene.add(d2);
+        scene.add(new THREE.GridHelper(200,40,0x274060,0x1b2738));
+        let drag=false,lx=0,ly=0;
+        c3.addEventListener("mousedown",e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+        window.addEventListener("mouseup",()=>drag=false);
+        window.addEventListener("mousemove",e=>{ if(!drag||view!=="3d")return; t3.theta+=(e.clientX-lx)*0.01; t3.phi-=(e.clientY-ly)*0.01; t3.phi=Math.max(0.15,Math.min(Math.PI-0.15,t3.phi)); lx=e.clientX;ly=e.clientY; });
+        c3.addEventListener("wheel",e=>{ e.preventDefault(); t3.radius*=(1+Math.sign(e.deltaY)*0.1); t3.radius=Math.max(5,Math.min(3000,t3.radius)); },{passive:false});
+        (function loop(){
+            if(view==="3d"){
+                const r=c3.getBoundingClientRect();
+                if(c3.width!==Math.round(r.width)||c3.height!==Math.round(r.height)){ renderer.setSize(r.width,r.height,false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); }
+                camera.position.set(t3.tx+t3.radius*Math.sin(t3.phi)*Math.cos(t3.theta), t3.ty+t3.radius*Math.cos(t3.phi), t3.tz+t3.radius*Math.sin(t3.phi)*Math.sin(t3.theta));
+                camera.lookAt(t3.tx,t3.ty,t3.tz); renderer.render(scene,camera);
+            }
+            requestAnimationFrame(loop);
+        })();
+    }
+    function build3D(geo){
+        if(modelGroup){ scene.remove(modelGroup); modelGroup=null; }
+        const meshes=geo.meshes||[]; if(!meshes.length){ $("hud").textContent="No geometry yet — draw some walls."; return; }
+        let mnx=1e9,mny=1e9,mnz=1e9,mxx=-1e9,mxy=-1e9,mxz=-1e9;
+        meshes.forEach(m=>{const v=m.vertices||[];for(let i=0;i<v.length;i+=3){mnx=Math.min(mnx,v[i]);mxx=Math.max(mxx,v[i]);mny=Math.min(mny,v[i+1]);mxy=Math.max(mxy,v[i+1]);mnz=Math.min(mnz,v[i+2]);mxz=Math.max(mxz,v[i+2]);}});
+        const cx=(mnx+mxx)/2,cy=(mny+mxy)/2,cz=(mnz+mxz)/2;
+        const root=new THREE.Group();
+        meshes.forEach(m=>{
+            const bg=new THREE.BufferGeometry(); const v=m.vertices||[]; const pos=new Float32Array(v.length);
+            for(let i=0;i<v.length;i+=3){pos[i]=v[i]-cx;pos[i+1]=v[i+1]-cy;pos[i+2]=v[i+2]-cz;}
+            bg.setAttribute("position",new THREE.BufferAttribute(pos,3));
+            if(m.normals&&m.normals.length===v.length) bg.setAttribute("normal",new THREE.BufferAttribute(new Float32Array(m.normals),3));
+            if(m.indices&&m.indices.length){ let mx=0; for(const x of m.indices) if(x>mx)mx=x; bg.setIndex(new THREE.BufferAttribute(mx>65535?new Uint32Array(m.indices):new Uint16Array(m.indices),1)); }
+            if(!m.normals||m.normals.length!==v.length) bg.computeVertexNormals();
+            const c=m.color||[0.7,0.7,0.7,1]; let op=(typeof c[3]==="number")?c[3]:1; if(op<0.05)op=1;
+            root.add(new THREE.Mesh(bg,new THREE.MeshLambertMaterial({color:new THREE.Color(c[0],c[1],c[2]),transparent:op<0.99,opacity:op,side:THREE.DoubleSide})));
+        });
+        root.rotation.x=-Math.PI/2;
+        modelGroup=new THREE.Group(); modelGroup.add(root); scene.add(modelGroup);
+        const sz=Math.max(mxx-mnx,mxy-mny,mxz-mnz)||20; t3.radius=sz*1.6; t3.tx=0;t3.ty=0;t3.tz=0;
+        $("hud").textContent=meshes.length+" elements · drag = orbit · scroll = zoom";
+    }
+    async function refresh3D(){
+        try{
+            // Untouched IFC import: render the project's real BIM files per
+            // stage, exactly like the dashboard viewer (dedicated stage IFC
+            // when uploaded, else the master model filtered by phase tag).
+            if(docSource==="ifc" && PROJECT_ID){
+                const q=activePhase?("?phase="+encodeURIComponent(activePhase)):"";
+                let geo=null;
+                for(let i=0;i<300;i++){
+                    const res=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/bim-geometry"+q);
+                    if(res.status===202){ $("hud").textContent="Parsing project IFC… this can take a few minutes the first time."; await new Promise(r=>setTimeout(r,2000)); continue; }
+                    geo=await res.json();
+                    if(!res.ok) throw new Error(geo.status||geo.error||("HTTP "+res.status));
+                    break;
+                }
+                if(geo){
+                    if(activePhase && geo.phase_source!=="dedicated_ifc"){
+                        geo=Object.assign({}, geo, {meshes:(geo.meshes||[]).filter(m=>(m.phase||"structure")===activePhase)});
+                    }
+                    build3D(geo); dirty3d=false; return;
+                }
+            }
+            // Live plan preview (edited or studio-authored designs).
+            // POST the spec: imported IFC plans are far too large for a URL.
+            const res=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID||"preview")+"/design-geometry",
+                {method:"POST",headers:{"Content-Type":"application/json"},
+                 body:JSON.stringify({spec:doc,phase:activePhase||""})});
+            const geo=await res.json(); build3D(geo); dirty3d=false;
+        }catch(e){ setStatus("3D preview failed: "+e.message,"err"); }
+    }
+
+    /* ───────── view tabs ───────── */
+    function setView(v){
+        view=v;
+        $("tab2d").classList.toggle("active",v==="2d"); $("tab3d").classList.toggle("active",v==="3d");
+        plan.style.display=v==="2d"?"block":"none"; c3.style.display=v==="3d"?"block":"none";
+        $("phases").style.display=v==="3d"?"flex":"none";
+        if(v==="2d"){ render2D(); $("hud").textContent=HELP[tool]; }
+        else { refresh3D(); }
+    }
+    $("tab2d").addEventListener("click",()=>setView("2d"));
+    $("tab3d").addEventListener("click",()=>setView("3d"));
+    document.querySelectorAll("#phases button").forEach(b=>b.addEventListener("click",()=>{
+        document.querySelectorAll("#phases button").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+        activePhase=b.dataset.phase||""; refresh3D();
+    }));
+
+    /* ───────── actions ───────── */
+    $("saveBtn").addEventListener("click", async ()=>{
+        if(!PROJECT_ID){ setStatus("Select a project first.","err"); return; }
+        recomputeAllRooms(); setStatus("Saving…");
+        try{ const res=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec:doc})});
+            const j=await res.json(); if(res.ok&&j.status==="ok"){ doc=j.spec; pushDocToFields(); setStatus("Saved. Shows in the dashboard 3D viewer.","ok"); }
+            else setStatus(j.error||"Save failed","err"); }catch(e){ setStatus("Save failed: "+e.message,"err"); }
+    });
+    $("ifcBtn").addEventListener("click", async ()=>{
+        if(!PROJECT_ID){ setStatus("Select a project first.","err"); return; }
+        recomputeAllRooms(); setStatus("Saving + exporting IFC…");
+        try{
+            await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec:doc})});
+            const res=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design/export-ifc",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+            const j=await res.json();
+            if(res.ok&&j.status==="ok"){ setStatus("IFC exported ("+j.element_count+" elements, "+j.storey_count+" storeys, "+(j.space_count||0)+" rooms). It's now the project BIM model.","ok"); window.open(j.file_url,"_blank"); }
+            else setStatus(j.error||"IFC export failed","err");
+        }catch(e){ setStatus("IFC export failed: "+e.message,"err"); }
+    });
+    $("speckleBtn").addEventListener("click", async ()=>{
+        if(!PROJECT_ID){ setStatus("Select a project first.","err"); return; }
+        const stream=prompt("Speckle project (stream) ID:\n(blank = use linked one)")||"";
+        const token=prompt("Speckle token:\n(blank = server SPECKLE_TOKEN)")||"";
+        setStatus("Saving + pushing to Speckle…");
+        try{
+            await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec:doc})});
+            const body={}; if(stream)body.speckle_project_id=stream; if(token)body.token=token;
+            const res=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design/push-to-speckle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+            const j=await res.json();
+            if(res.ok&&j.status==="ok") setStatus("Pushed to Speckle ✓ ("+j.mesh_count+" meshes)","ok"); else setStatus(j.error||"Push failed","err");
+        }catch(e){ setStatus("Push failed: "+e.message,"err"); }
+    });
+
+    function updateNavLinks(){
+        const dash = $("navLinkDashboard");
+        if(dash){
+            dash.href = PROJECT_ID
+                ? `/dashboard?project=${encodeURIComponent(PROJECT_ID)}`
+                : "/dashboard";
+        }
+    }
+    function syncProjectUrl(){
+        const url = new URL(window.location.href);
+        if(PROJECT_ID) url.searchParams.set("project", PROJECT_ID);
+        else url.searchParams.delete("project");
+        window.history.replaceState(null, "", url);
+        updateNavLinks();
+    }
+    async function switchProject(projectId){
+        PROJECT_ID = projectId || "";
+        if(window.VeritasProjectContext) window.VeritasProjectContext.writePersisted(PROJECT_ID);
+        const sel = $("projectSel");
+        if(sel && sel.value !== PROJECT_ID) sel.value = PROJECT_ID;
+        syncProjectUrl();
+        await loadSaved();
+    }
+
+    /* ───────── init ───────── */
+    async function loadPresets(){
+        try{ const j=await (await fetch("/api/design/presets")).json();
+            (j.presets||[]).forEach(p=>{ const o=document.createElement("option"); o.value=p.building_type_id; o.textContent=p.label; $("presetSel").appendChild(o); });
+        }catch(e){}
+        $("presetSel").addEventListener("change", async ()=>{
+            const bt=$("presetSel").value; if(!bt) return;
+            try{ const j=await (await fetch("/api/design/default-spec?building_type_id="+encodeURIComponent(bt))).json();
+                if(j.spec){ doc=j.spec; activeStorey=0; selection=null; pending=null; pendingMep=null; doc.storeys.forEach(ensureArrays); pushDocToFields(); recomputeAllRooms(); fitView(); render2D(); if(view==="3d")refresh3D(); setStatus("Template loaded — edit freely.","ok"); }
+            }catch(e){}
+        });
+    }
+    async function loadProjects(){
+        const sel=$("projectSel"); sel.innerHTML="";
+        let items=[];
+        try{
+            if(window.VeritasProjectContext){
+                items = await window.VeritasProjectContext.fetchProjectsList(CURRENT_USER_ID);
+            } else {
+                const j=await (await fetch("/api/new-project/projects?status=active")).json();
+                items=(j.data||[]).map(p=>({ id:p.id, name:p.name||p.id }));
+            }
+        }catch(e){}
+        if(!items.length){
+            const o=document.createElement("option"); o.value=""; o.textContent="(no active projects)"; sel.appendChild(o);
+            PROJECT_ID=""; syncProjectUrl(); return;
+        }
+        if(window.VeritasProjectContext){
+            PROJECT_ID = window.VeritasProjectContext.resolveActiveId(items, PROJECT_ID);
+            if(PROJECT_ID) window.VeritasProjectContext.writePersisted(PROJECT_ID);
+        } else if(!PROJECT_ID) PROJECT_ID = items[0].id;
+        items.forEach(it=>{
+            const o=document.createElement("option");
+            o.value=it.id;
+            o.textContent=it.name||it.id;
+            sel.appendChild(o);
+        });
+        sel.value = PROJECT_ID;
+        syncProjectUrl();
+        sel.addEventListener("change", ()=> switchProject(sel.value));
+    }
+    async function loadSaved(){
+        selection=null; pending=null; pendingMep=null; docSource="spec";
+        if(!PROJECT_ID){ doc=blankDoc(); activeStorey=0; pushDocToFields(); recomputeAllRooms(); fitView(); render2D(); return; }
+        let loaded=false, starter=null, tryIfc=false;
+        try{ const j=await (await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design")).json();
+            tryIfc = !!j.prefer_ifc;
+            if(j.spec && Array.isArray(j.spec.storeys)){
+                // A saved design wins unless the project's uploaded IFC set is
+                // newer than the save — then the upload is what gets edited.
+                if(j.saved && !tryIfc){ doc=j.spec; loaded=true; setStatus("Loaded saved design.","ok"); }
+                else starter=j.spec;
+            }
+        }catch(e){}
+        if(!loaded && tryIfc){
+            setStatus("Loading the project's uploaded IFC model…","");
+            try{
+                const r=await fetch("/api/project/"+encodeURIComponent(PROJECT_ID)+"/design/import-ifc",
+                    {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+                const ij=await r.json().catch(()=>({}));
+                if(r.ok && ij.status==="ok" && ij.spec && Array.isArray(ij.spec.storeys) &&
+                   ij.spec.storeys.some(s=>(s.walls||[]).length||(s.columns||[]).length)){
+                    doc=ij.spec; loaded=true; docSource="ifc";
+                    const c=ij.counts||{};
+                    setStatus("Imported "+(ij.source||"project IFC")+" — "
+                        +(c.storeys||0)+" storeys, "+(c.walls||0)+" walls, "
+                        +(c.openings||0)+" openings. Save to keep.","ok");
+                }
+            }catch(e){}
+        }
+        if(!loaded){
+            doc = starter || blankDoc();
+            setStatus(starter ? "Starter plan loaded — edit & save." : "New blank plan.","");
+        }
+        activeStorey=0; doc.storeys.forEach(ensureArrays); doc.storeys.forEach(seedLabelsFromRooms); pushDocToFields(); recomputeAllRooms(); syncSelProps(); fitView(); render2D(); if(view==="3d") refresh3D();
+    }
+    function fitView(){
+        let xs=[],ys=[]; doc.storeys.forEach(s=>{ s.walls.forEach(w=>{xs.push(w.x1,w.x2);ys.push(w.y1,w.y2);}); s.columns.forEach(c=>{xs.push(c.x);ys.push(c.y);}); });
+        if(!xs.length){ cam={scale:14,cx:0,cy:0}; return; }
+        const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+        cam.cx=(minx+maxx)/2; cam.cy=(miny+maxy)/2;
+        const span=Math.max(maxx-minx,maxy-miny,8); cam.scale=Math.max(4,Math.min(60, (Math.min(W()||800,H()||600)*0.7)/span ));
+    }
+
+    init3D();
+    (async function(){ await loadPresets(); await loadProjects(); await loadSaved(); setView("2d"); })();
+    window.addEventListener("resize",()=>{ if(view==="2d") render2D(); });
+})();
+</script>
+</body>
+</html>
