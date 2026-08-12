@@ -18,7 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 10000
 
+# Persist uploads + data when Render mounts a disk at /var/data (see docker-entrypoint.sh).
 # gthread: SSE (/api/events) holds a connection open; sync worker would block all other requests (502s).
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --worker-class gthread --workers 1 --threads 8 --timeout 120 --access-logfile - --error-logfile - app:app"]
+CMD ["/app/docker-entrypoint.sh"]
