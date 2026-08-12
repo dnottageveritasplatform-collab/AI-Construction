@@ -1019,12 +1019,20 @@ def _handle_ifc_upload(prefix_id: str, is_draft: bool) -> tuple[dict, int]:
     doc_id = request.form.get("doc_id", "").strip()
     if not doc_id or doc_id == "0":
         doc_id = "DOC-" + str(uuid.uuid4())[:8].upper()
-    try:
-        size_kb = max(1, int((f.content_length or 0) // 1024))
-    except Exception:
-        size_kb = 0
 
     payload = _save_ifc_upload(prefix_id, doc_id, f)
+    # Multipart uploads often omit Content-Length (content_length is None/0),
+    # which previously forced size_kb=1 and made the UI show "1KB" after refresh.
+    # Always measure the file we actually wrote to disk.
+    try:
+        saved_path = os.path.join(IFC_DIR, payload.get("filename", ""))
+        size_kb = max(1, int((os.path.getsize(saved_path) + 1023) // 1024))
+    except OSError:
+        try:
+            size_kb = max(1, int((f.content_length or 0) // 1024))
+        except Exception:
+            size_kb = 1
+
     doc = _register_ifc_document(
         prefix_id,
         doc_id,

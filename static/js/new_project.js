@@ -1591,7 +1591,12 @@ async function uploadStageIfc(phase, file) {
         const json = await res.json();
         doc.file_url = json.file_url;
         doc.doc_id = json.doc_id || docId;
-        if (json.doc) Object.assign(doc, json.doc);
+        if (json.doc) {
+            const localSize = doc.size_kb;
+            Object.assign(doc, json.doc);
+            const serverSize = Number(json.doc.size_kb) || 0;
+            if (localSize > 1 && serverSize <= 1) doc.size_kb = localSize;
+        }
         _stageIfcStatus[phase] = "preparing";
         renderStageIfcGrid();
         renderUploadedDocs();
@@ -1676,7 +1681,13 @@ function handleFiles(files) {
 
                 doc.file_url  = json.file_url;
                 doc.doc_id    = json.doc_id || docId;
-                if (json.doc) Object.assign(doc, json.doc);
+                if (json.doc) {
+                    const localSize = doc.size_kb;
+                    Object.assign(doc, json.doc);
+                    // Keep accurate client size if server still returns a stub (legacy).
+                    const serverSize = Number(json.doc.size_kb) || 0;
+                    if (localSize > 1 && serverSize <= 1) doc.size_kb = localSize;
+                }
                 renderUploadedDocs();
                 renderStageIfcGrid();
                 showToast(`${ext} uploaded — BIM viewer ready.`, "success");
