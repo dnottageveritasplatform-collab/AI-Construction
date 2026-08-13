@@ -6,6 +6,7 @@ Env:
   IFC_GEOMETRY_CACHE=0  — disable disk JSON cache for GET /ifc-geometry (default on).
   IFC_GEOMETRY_GZIP=0  — disable gzip Content-Encoding for /ifc-geometry (default on).
   IFC_FAST_GEOMETRY=1 — faster tessellation; sets disable-opening-subtractions (rougher openings).
+  IFC_PREWARM=1 — enable background geometry parse after upload (default off; can SIGSEGV under memory pressure on Render).
   Smoke test: GET /api/admin/ifc/cache-smoke?project_id=PRJ-... (localhost; optional IFC_RELINK_TOKEN).
 """
 import gzip
@@ -37,6 +38,12 @@ os.makedirs(GEOMETRY_CACHE_DIR, exist_ok=True)
 def _ifc_geometry_cache_enabled() -> bool:
     v = os.getenv("IFC_GEOMETRY_CACHE", "1").strip().lower()
     return v not in ("0", "false", "no", "off")
+
+
+def _ifc_prewarm_enabled() -> bool:
+    """Background ifcopenshell parse after upload. Default off — can SIGSEGV on small cloud hosts."""
+    v = os.getenv("IFC_PREWARM", "0").strip().lower()
+    return v in ("1", "true", "yes", "on")
 
 
 # Background parse jobs so the browser never blocks on a long first parse.
@@ -980,7 +987,10 @@ def _prewarm_ifc_geometry(path: str, project_id: str, phase: str | None) -> None
 
     Caller should schedule this *after* the upload HTTP response is sent so
     Render does not 502 while ifcopenshell is already competing for RAM/CPU.
+    Disabled unless IFC_PREWARM=1 (native parse can SIGSEGV under memory pressure).
     """
+    if not _ifc_prewarm_enabled():
+        return
     if not _ifc_geometry_cache_enabled():
         return
     if not path or not os.path.isfile(path):
@@ -1066,8 +1076,10 @@ def _handle_ifc_upload(prefix_id: str, is_draft: bool) -> tuple[dict, int, tuple
         )
         payload["doc"] = doc
         payload["bim_phase"] = doc.get("bim_phase") or ""
-        payload["prewarming"] = True
-        prewarm = (saved_path, prefix_id, doc.get("bim_phase") or None)
+        payload["prewarming"] = bool(_ifc_prewarm_enabled())
+        prewarm = None
+        if _ifc_prewarm_enabled():
+            prewarm = (saved_path, prefix_id, doc.get("bim_phase") or None)
         return payload, 200, prewarm
 
 
@@ -1105,8 +1117,9 @@ def _ifc_geometry_status(prefix_id: str, doc_id: str) -> dict:
     path = os.path.join(IFC_DIR, f"{prefix_id}_{doc_id}.ifc")
     if not os.path.isfile(path):
         return {"status": "missing"}
-    if not _ifc_geometry_cache_enabled():
-        return {"status": "ready"}  # nothing to pre-warm; served on demand
+    if not _ifc_geometry_cache_enabled() or not _ifc_prewarm_enabled():
+        # No background parse — treat as ready; dashboard builds on first view.
+        return {"status": "ready"}
     try:
         if _read_geometry_cache(path) is not None:
             return {"status": "ready"}

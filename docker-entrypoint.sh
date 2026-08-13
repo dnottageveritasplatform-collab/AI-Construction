@@ -3,6 +3,9 @@
 # Without /var/data (local Docker), run normally from the image filesystem.
 set -e
 
+# Default: do not background-parse IFC after upload (ifcopenshell can SIGSEGV on small hosts).
+export IFC_PREWARM="${IFC_PREWARM:-0}"
+
 PERSIST_ROOT="${PERSIST_ROOT:-/var/data}"
 
 if [ -d "$PERSIST_ROOT" ]; then
