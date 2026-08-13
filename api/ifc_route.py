@@ -90,7 +90,7 @@ def _parse_job_clear_if_stale(path: str) -> bool:
 def _geometry_cache_path(ifc_path: str) -> str:
     st = os.stat(ifc_path)
     mtime_ns = getattr(st, "st_mtime_ns", int(st.st_mtime * 1_000_000_000))
-    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v10".encode()
+    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v11".encode()
     h = hashlib.sha256(key).hexdigest()[:32]
     return os.path.join(GEOMETRY_CACHE_DIR, f"{h}.json")
 
