@@ -68,6 +68,16 @@ const BIM_STAGE_IFC = [
     { phase: "finishing",  label: "Interior Finishing" },
 ];
 
+/** Serialize IFC uploads in the browser so Render is not hit with parallel large POSTs. */
+let _ifcUploadChain = Promise.resolve();
+
+function enqueueIfcUpload(taskFn) {
+    const run = _ifcUploadChain.then(() => taskFn());
+    // Keep the chain alive even if one upload fails.
+    _ifcUploadChain = run.catch(() => {});
+    return run;
+}
+
 // ─────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────
@@ -1553,6 +1563,10 @@ async function uploadStageIfc(phase, file) {
         showToast("Stage uploads must be .ifc files.", "error");
         return;
     }
+    return enqueueIfcUpload(() => _uploadStageIfcNow(phase, file));
+}
+
+async function _uploadStageIfcNow(phase, file) {
     const docId = "DOC-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     const existing = _stageIfcDoc(phase);
     if (existing) {
@@ -1611,6 +1625,7 @@ async function uploadStageIfc(phase, file) {
         renderStageIfcGrid();
         renderUploadedDocs();
         showToast("Stage IFC upload failed: " + err.message, "error");
+        throw err;
     }
 }
 
@@ -1646,64 +1661,93 @@ function setupDocUpload() {
 }
 
 function handleFiles(files) {
-    files.forEach(async file => {
+    files.forEach(file => {
         const ext = file.name.split(".").pop().toUpperCase();
-        const docId = "DOC-" + Math.random().toString(36).slice(2,8).toUpperCase();
-        const doc = {
-            doc_id:       docId,
-            name:         file.name,
-            type:         ext,
-            category:     guessCategory(ext),
-            size_kb:      Math.round(file.size / 1024),
-            version_note: "",
-            file_url:     null,
-        };
-        STATE.uploadedDocs.push(doc);
-        renderUploadedDocs();
-
-        try {
-            if (ext === "IFC" || ext === "DWG" || ext === "DXF") {
-                const formData = new FormData();
-                formData.append("file",   file);
-                formData.append("doc_id", docId);
-                if (STATE.draftId) formData.append("draft_id", STATE.draftId);
-                if (STATE.editProjectId) formData.append("project_id", STATE.editProjectId);
-
-                const uploadPath = ext === "IFC"
-                    ? `${wizardApiBase()}/documents/upload-ifc`
-                    : `${wizardApiBase()}/documents/upload-cad`;
-                const res = await fetch(uploadPath, { method: "POST", body: formData });
-                if (!res.ok) {
-                    const errJson = await res.json().catch(() => ({}));
-                    throw new Error(errJson.error || ("Upload failed: " + res.status));
-                }
-                const json = await res.json();
-
-                doc.file_url  = json.file_url;
-                doc.doc_id    = json.doc_id || docId;
-                if (json.doc) {
-                    const localSize = doc.size_kb;
-                    Object.assign(doc, json.doc);
-                    // Keep accurate client size if server still returns a stub (legacy).
-                    const serverSize = Number(json.doc.size_kb) || 0;
-                    if (localSize > 1 && serverSize <= 1) doc.size_kb = localSize;
-                }
-                renderUploadedDocs();
-                renderStageIfcGrid();
-                showToast(`${ext} uploaded — BIM viewer ready.`, "success");
-            } else {
-                // Non-IFC: register metadata only (existing behaviour)
-                await apiFetch(`${wizardApiBase()}/documents`, {
-                    method: "POST",
-                    body: JSON.stringify({ name: doc.name, type: ext.toLowerCase(), category: doc.category, size_kb: doc.size_kb }),
-                });
-                showToast(`${file.name} uploaded.`, "success");
-            }
-        } catch(err) {
-            console.error("[Upload]", err);
-            showToast("Upload failed: " + err.message, "error");
+        if (ext === "IFC" || ext === "DWG" || ext === "DXF") {
+            enqueueIfcUpload(() => _uploadBimFileNow(file, ext));
+        } else {
+            _uploadGenericFileNow(file, ext);
         }
     });
+}
+
+async function _uploadGenericFileNow(file, ext) {
+    const docId = "DOC-" + Math.random().toString(36).slice(2,8).toUpperCase();
+    const doc = {
+        doc_id:       docId,
+        name:         file.name,
+        type:         ext,
+        category:     guessCategory(ext),
+        size_kb:      Math.round(file.size / 1024),
+        version_note: "",
+        file_url:     null,
+    };
+    STATE.uploadedDocs.push(doc);
+    renderUploadedDocs();
+    try {
+        await apiFetch(`${wizardApiBase()}/documents`, {
+            method: "POST",
+            body: JSON.stringify({ name: doc.name, type: ext.toLowerCase(), category: doc.category, size_kb: doc.size_kb }),
+        });
+        showToast(`${file.name} uploaded.`, "success");
+    } catch (err) {
+        console.error("[Upload]", err);
+        STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== docId);
+        renderUploadedDocs();
+        showToast("Upload failed: " + err.message, "error");
+    }
+}
+
+async function _uploadBimFileNow(file, ext) {
+    const docId = "DOC-" + Math.random().toString(36).slice(2,8).toUpperCase();
+    const doc = {
+        doc_id:       docId,
+        name:         file.name,
+        type:         ext,
+        category:     guessCategory(ext),
+        size_kb:      Math.round(file.size / 1024),
+        version_note: "",
+        file_url:     null,
+    };
+    STATE.uploadedDocs.push(doc);
+    renderUploadedDocs();
+
+    try {
+        const formData = new FormData();
+        formData.append("file",   file);
+        formData.append("doc_id", docId);
+        if (STATE.draftId) formData.append("draft_id", STATE.draftId);
+        if (STATE.editProjectId) formData.append("project_id", STATE.editProjectId);
+
+        const uploadPath = ext === "IFC"
+            ? `${wizardApiBase()}/documents/upload-ifc`
+            : `${wizardApiBase()}/documents/upload-cad`;
+        const res = await fetch(uploadPath, { method: "POST", body: formData });
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error || ("Upload failed: " + res.status));
+        }
+        const json = await res.json();
+
+        doc.file_url  = json.file_url;
+        doc.doc_id    = json.doc_id || docId;
+        if (json.doc) {
+            const localSize = doc.size_kb;
+            Object.assign(doc, json.doc);
+            const serverSize = Number(json.doc.size_kb) || 0;
+            if (localSize > 1 && serverSize <= 1) doc.size_kb = localSize;
+        }
+        renderUploadedDocs();
+        renderStageIfcGrid();
+        showToast(`${ext} uploaded — BIM viewer ready.`, "success");
+    } catch (err) {
+        console.error("[Upload]", err);
+        STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== docId);
+        renderUploadedDocs();
+        renderStageIfcGrid();
+        showToast("Upload failed: " + err.message, "error");
+        throw err;
+    }
 }
 
 function guessCategory(ext) {

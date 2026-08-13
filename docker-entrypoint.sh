@@ -35,7 +35,7 @@ exec gunicorn \
   --worker-class gthread \
   --workers 1 \
   --threads 8 \
-  --timeout 120 \
+  --timeout 300 \
   --access-logfile - \
   --error-logfile - \
   app:app

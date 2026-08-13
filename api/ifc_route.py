@@ -43,6 +43,10 @@ def _ifc_geometry_cache_enabled() -> bool:
 # Maps absolute ifc/cad path -> "running" | "error". Guarded by _PARSE_LOCK.
 _PARSE_JOBS: dict[str, str] = {}
 _PARSE_LOCK = threading.Lock()
+# One IFC upload at a time (large multipart + projects.json save).
+_IFC_UPLOAD_LOCK = threading.Lock()
+# One heavy geometry parse at a time (avoids OOM / 502 under concurrent prewarms).
+_PREWARM_SERIAL_LOCK = threading.Lock()
 
 
 def _geometry_cache_path(ifc_path: str) -> str:
@@ -972,8 +976,11 @@ def _register_ifc_document(
 
 
 def _prewarm_ifc_geometry(path: str, project_id: str, phase: str | None) -> None:
-    """Kick off a background parse right after upload so the dashboard is instant
-    when first opened. No-op if caching is off or the file is already cached."""
+    """Kick off a background parse so the dashboard is fast on first view.
+
+    Caller should schedule this *after* the upload HTTP response is sent so
+    Render does not 502 while ifcopenshell is already competing for RAM/CPU.
+    """
     if not _ifc_geometry_cache_enabled():
         return
     if not path or not os.path.isfile(path):
@@ -1002,56 +1009,66 @@ def _prewarm_ifc_geometry(path: str, project_id: str, phase: str | None) -> None
             daemon=True,
         ).start()
         logger.info(
-            "ifc-geometry PREWARM started project=%s phase=%s path=%s",
+            "ifc-geometry PREWARM queued project=%s phase=%s path=%s",
             project_id, phase_req or "all", os.path.basename(path),
         )
 
 
-def _handle_ifc_upload(prefix_id: str, is_draft: bool) -> tuple[dict, int]:
+def _schedule_prewarm_after_response(
+    response: Response, path: str, project_id: str, phase: str | None
+) -> Response:
+    """Start geometry prewarm only after the upload response is closed."""
+
+    def _kick() -> None:
+        # Brief yield so the proxy can finish sending 200 before heavy work.
+        time.sleep(0.15)
+        try:
+            _prewarm_ifc_geometry(path, project_id, phase)
+        except Exception:
+            logger.debug("Deferred IFC prewarm failed", exc_info=True)
+
+    response.call_on_close(lambda: threading.Thread(target=_kick, daemon=True).start())
+    return response
+
+
+def _handle_ifc_upload(prefix_id: str, is_draft: bool) -> tuple[dict, int, tuple | None]:
+    """Save IFC + register metadata. Returns (payload, http_code, prewarm_args|None)."""
     f = request.files.get("file")
     if not f:
-        return {"error": "No file in request"}, 400
+        return {"error": "No file in request"}, 400, None
 
     bim_phase = request.form.get("bim_phase", "").strip()
     if bim_phase and _normalize_bim_phase(bim_phase) is None:
-        return {"error": "Invalid bim_phase"}, 400
+        return {"error": "Invalid bim_phase"}, 400, None
 
     doc_id = request.form.get("doc_id", "").strip()
     if not doc_id or doc_id == "0":
         doc_id = "DOC-" + str(uuid.uuid4())[:8].upper()
 
-    payload = _save_ifc_upload(prefix_id, doc_id, f)
-    # Multipart uploads often omit Content-Length (content_length is None/0),
-    # which previously forced size_kb=1 and made the UI show "1KB" after refresh.
-    # Always measure the file we actually wrote to disk.
-    try:
-        saved_path = os.path.join(IFC_DIR, payload.get("filename", ""))
-        size_kb = max(1, int((os.path.getsize(saved_path) + 1023) // 1024))
-    except OSError:
+    # Serialize large uploads so concurrent stage POSTs do not fight for disk/RAM.
+    with _IFC_UPLOAD_LOCK:
+        payload = _save_ifc_upload(prefix_id, doc_id, f)
         try:
-            size_kb = max(1, int((f.content_length or 0) // 1024))
-        except Exception:
-            size_kb = 1
+            saved_path = os.path.join(IFC_DIR, payload.get("filename", ""))
+            size_kb = max(1, int((os.path.getsize(saved_path) + 1023) // 1024))
+        except OSError:
+            try:
+                size_kb = max(1, int((f.content_length or 0) // 1024))
+            except Exception:
+                size_kb = 1
 
-    doc = _register_ifc_document(
-        prefix_id,
-        doc_id,
-        f.filename or payload.get("filename", "model.ifc"),
-        size_kb,
-        bim_phase,
-    )
-    payload["doc"] = doc
-    payload["bim_phase"] = doc.get("bim_phase") or ""
-
-    # Pre-warm the geometry cache in the background so the dashboard opens
-    # instantly the first time this model (or stage) is viewed.
-    try:
-        saved_path = os.path.join(IFC_DIR, payload.get("filename", ""))
-        _prewarm_ifc_geometry(saved_path, prefix_id, doc.get("bim_phase") or None)
+        doc = _register_ifc_document(
+            prefix_id,
+            doc_id,
+            f.filename or payload.get("filename", "model.ifc"),
+            size_kb,
+            bim_phase,
+        )
+        payload["doc"] = doc
+        payload["bim_phase"] = doc.get("bim_phase") or ""
         payload["prewarming"] = True
-    except Exception:
-        logger.debug("IFC prewarm dispatch failed", exc_info=True)
-    return payload, 200
+        prewarm = (saved_path, prefix_id, doc.get("bim_phase") or None)
+        return payload, 200, prewarm
 
 
 @ifc_bp.route("/api/new-project/draft/<draft_id>/documents/upload-ifc", methods=["POST"])
@@ -1059,8 +1076,12 @@ def upload_ifc(draft_id: str):
     """Receive a binary IFC upload from the New Project wizard."""
     if draft_id not in DRAFTS:
         return jsonify({"error": "Draft not found"}), 404
-    payload, code = _handle_ifc_upload(draft_id, is_draft=True)
-    return jsonify(payload), code
+    payload, code, prewarm = _handle_ifc_upload(draft_id, is_draft=True)
+    resp = jsonify(payload)
+    if code == 200 and prewarm:
+        path, pid, phase = prewarm
+        _schedule_prewarm_after_response(resp, path, pid, phase)
+    return resp, code
 
 
 @ifc_bp.route("/api/new-project/active/<project_id>/documents/upload-ifc", methods=["POST"])
@@ -1068,8 +1089,12 @@ def upload_ifc_active(project_id: str):
     """IFC upload when editing an active project in the wizard."""
     if project_id not in STORE_PROJECTS or STORE_PROJECTS[project_id].get("status") != "active":
         return jsonify({"error": "Active project not found"}), 404
-    payload, code = _handle_ifc_upload(project_id, is_draft=False)
-    return jsonify(payload), code
+    payload, code, prewarm = _handle_ifc_upload(project_id, is_draft=False)
+    resp = jsonify(payload)
+    if code == 200 and prewarm:
+        path, pid, phase = prewarm
+        _schedule_prewarm_after_response(resp, path, pid, phase)
+    return resp, code
 
 
 def _ifc_geometry_status(prefix_id: str, doc_id: str) -> dict:
@@ -1348,22 +1373,24 @@ def _run_parse_job(
     project_id: str,
 ) -> None:
     """Background worker: parse + cache a BIM file, then clear the job flag."""
-    t0 = time.perf_counter()
-    try:
-        out = _build_geometry_payload(
-            path, kind, phase_source, phase_req, force_phase, project_id
-        )
-        logger.info(
-            "ifc-geometry BACKGROUND parse done project=%s kind=%s bytes=%s parse_ms=%.1f",
-            project_id, kind, len(out), (time.perf_counter() - t0) * 1000,
-        )
-    except Exception:
-        logger.exception("Background BIM parse failed for %s", path)
+    # Serialize heavy parses so concurrent stage uploads do not OOM the instance.
+    with _PREWARM_SERIAL_LOCK:
+        t0 = time.perf_counter()
+        try:
+            out = _build_geometry_payload(
+                path, kind, phase_source, phase_req, force_phase, project_id
+            )
+            logger.info(
+                "ifc-geometry BACKGROUND parse done project=%s kind=%s bytes=%s parse_ms=%.1f",
+                project_id, kind, len(out), (time.perf_counter() - t0) * 1000,
+            )
+        except Exception:
+            logger.exception("Background BIM parse failed for %s", path)
+            with _PARSE_LOCK:
+                _PARSE_JOBS[path] = "error"
+            return
         with _PARSE_LOCK:
-            _PARSE_JOBS[path] = "error"
-        return
-    with _PARSE_LOCK:
-        _PARSE_JOBS.pop(path, None)
+            _PARSE_JOBS.pop(path, None)
 
 
 @ifc_bp.route("/api/project/<project_id>/bim-geometry", methods=["GET"])
