@@ -7,6 +7,8 @@ set -e
 export IFC_PREWARM="${IFC_PREWARM:-0}"
 # Prefer faster tessellation on cloud hosts (lower crash / OOM risk).
 export IFC_FAST_GEOMETRY="${IFC_FAST_GEOMETRY:-1}"
+# medium ≈ closer to laptop detail; set IFC_DETAIL=high for max fidelity (more RAM).
+export IFC_DETAIL="${IFC_DETAIL:-medium}"
 # Large IFCs (All Stages ~100MB+) need a long child-process window.
 export IFC_PARSE_TIMEOUT="${IFC_PARSE_TIMEOUT:-600}"
 export IFC_PARSE_TIMEOUT_MAX="${IFC_PARSE_TIMEOUT_MAX:-1200}"

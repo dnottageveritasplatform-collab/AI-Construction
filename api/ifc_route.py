@@ -7,6 +7,7 @@ Env:
   IFC_GEOMETRY_GZIP=0  — disable gzip Content-Encoding for /ifc-geometry (default on).
   IFC_FAST_GEOMETRY=1 — faster tessellation; sets disable-opening-subtractions (rougher openings).
   IFC_PREWARM=1 — enable background geometry parse after upload (default off; can SIGSEGV under memory pressure on Render).
+  IFC_DETAIL=high|medium|low — geometry fidelity vs RAM (default medium on cloud entrypoint).
   Smoke test: GET /api/admin/ifc/cache-smoke?project_id=PRJ-... (localhost; optional IFC_RELINK_TOKEN).
 """
 import gzip
@@ -89,7 +90,7 @@ def _parse_job_clear_if_stale(path: str) -> bool:
 def _geometry_cache_path(ifc_path: str) -> str:
     st = os.stat(ifc_path)
     mtime_ns = getattr(st, "st_mtime_ns", int(st.st_mtime * 1_000_000_000))
-    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v9".encode()
+    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v10".encode()
     h = hashlib.sha256(key).hexdigest()[:32]
     return os.path.join(GEOMETRY_CACHE_DIR, f"{h}.json")
 
@@ -724,6 +725,16 @@ def _parse_ifc_to_geometry_subprocess(
             pass
 
 
+def _ifc_detail_level() -> str:
+    """high ≈ laptop fidelity; medium = cloud balance; low = max survival on small RAM."""
+    v = (os.getenv("IFC_DETAIL") or "medium").strip().lower()
+    if v in ("high", "full", "max"):
+        return "high"
+    if v in ("low", "draft", "min"):
+        return "low"
+    return "medium"
+
+
 def _parse_ifc_to_geometry(
     ifc_path: str,
     force_phase: str | None = None,
@@ -749,35 +760,92 @@ def _parse_ifc_to_geometry(
         )
 
     size_mb = _ifc_file_size_mb(ifc_path)
-    # Tiered profiles so >10MB models survive on ~2GB Render hosts.
+    detail = _ifc_detail_level()
+
+    # Size band + detail level. "high" tracks laptop-quality tessellation even on
+    # large All Days IFCs; "medium" keeps MEP/furniture but slightly coarser mesh;
+    # "low" is the previous survival mode for tiny hosts.
     if size_mb >= 80:
         profile = "huge"
-        max_meshes = int(os.getenv("IFC_MAX_MESHES_HUGE", "3500") or "3500")
-        linear_defl = float(os.getenv("IFC_DEFLECTION_HUGE", "0.25") or "0.25")
-        angular_defl = float(os.getenv("IFC_ANGULAR_HUGE", "0.75") or "0.75")
-        force_fast = True
-        num_threads = 1
     elif size_mb >= 10:
         profile = "large"
-        max_meshes = int(os.getenv("IFC_MAX_MESHES_LARGE", "6000") or "6000")
-        linear_defl = float(os.getenv("IFC_DEFLECTION_LARGE", "0.12") or "0.12")
-        angular_defl = float(os.getenv("IFC_ANGULAR_LARGE", "0.5") or "0.5")
-        force_fast = True
-        num_threads = 1
     else:
         profile = "normal"
-        max_meshes = int(os.getenv("IFC_MAX_MESHES", "12000") or "12000")
-        linear_defl = float(os.getenv("IFC_DEFLECTION", "0.01") or "0.01")
-        angular_defl = float(os.getenv("IFC_ANGULAR", "0.5") or "0.5")
+
+    if detail == "high":
+        max_meshes = int(os.getenv("IFC_MAX_MESHES_HIGH", "25000") or "25000")
+        linear_defl = float(os.getenv("IFC_DEFLECTION_HIGH", "0.01") or "0.01")
+        angular_defl = float(os.getenv("IFC_ANGULAR_HIGH", "0.5") or "0.5")
         force_fast = False
+        drop_normals = False
+        round_nd = 4
+        skip_extras = False
+        skip_mep_detail = False
         try:
             num_threads = max(1, min(4, (os.cpu_count() or 1)))
         except Exception:
             num_threads = 1
+        if profile == "huge":
+            # Still serialize a bit on the biggest files to limit peak RAM.
+            num_threads = 1
+            max_meshes = int(os.getenv("IFC_MAX_MESHES_HIGH_HUGE", "20000") or "20000")
+    elif detail == "low":
+        if profile == "huge":
+            max_meshes = int(os.getenv("IFC_MAX_MESHES_HUGE", "3500") or "3500")
+            linear_defl = float(os.getenv("IFC_DEFLECTION_HUGE", "0.25") or "0.25")
+            angular_defl = float(os.getenv("IFC_ANGULAR_HUGE", "0.75") or "0.75")
+        elif profile == "large":
+            max_meshes = int(os.getenv("IFC_MAX_MESHES_LARGE", "6000") or "6000")
+            linear_defl = float(os.getenv("IFC_DEFLECTION_LARGE", "0.12") or "0.12")
+            angular_defl = float(os.getenv("IFC_ANGULAR_LARGE", "0.5") or "0.5")
+        else:
+            max_meshes = int(os.getenv("IFC_MAX_MESHES", "12000") or "12000")
+            linear_defl = float(os.getenv("IFC_DEFLECTION", "0.01") or "0.01")
+            angular_defl = float(os.getenv("IFC_ANGULAR", "0.5") or "0.5")
+        force_fast = profile != "normal"
+        drop_normals = profile != "normal"
+        round_nd = 2 if profile == "huge" else (3 if profile == "large" else 4)
+        skip_extras = profile in ("large", "huge")
+        skip_mep_detail = profile == "huge"
+        num_threads = 1 if profile != "normal" else max(1, min(4, (os.cpu_count() or 1)))
+    else:
+        # medium — default for Render: keep detail (MEP, furniture, openings when possible)
+        # with moderate tessellation so ~2GB hosts can finish All Days.
+        if profile == "huge":
+            max_meshes = int(os.getenv("IFC_MAX_MESHES_MED_HUGE", "14000") or "14000")
+            linear_defl = float(os.getenv("IFC_DEFLECTION_MED_HUGE", "0.04") or "0.04")
+            angular_defl = float(os.getenv("IFC_ANGULAR_MED_HUGE", "0.5") or "0.5")
+            force_fast = True  # openings off only for the largest files
+            drop_normals = False
+            round_nd = 3
+            num_threads = 1
+        elif profile == "large":
+            max_meshes = int(os.getenv("IFC_MAX_MESHES_MED_LARGE", "16000") or "16000")
+            linear_defl = float(os.getenv("IFC_DEFLECTION_MED_LARGE", "0.02") or "0.02")
+            angular_defl = float(os.getenv("IFC_ANGULAR_MED_LARGE", "0.5") or "0.5")
+            force_fast = False
+            drop_normals = False
+            round_nd = 3
+            num_threads = 1
+        else:
+            max_meshes = int(os.getenv("IFC_MAX_MESHES", "20000") or "20000")
+            linear_defl = float(os.getenv("IFC_DEFLECTION", "0.01") or "0.01")
+            angular_defl = float(os.getenv("IFC_ANGULAR", "0.5") or "0.5")
+            force_fast = False
+            drop_normals = False
+            round_nd = 4
+            try:
+                num_threads = max(1, min(4, (os.cpu_count() or 1)))
+            except Exception:
+                num_threads = 1
+        skip_extras = False
+        skip_mep_detail = False
 
     logger.info(
-        "IFC parse start path=%s size_mb=%.1f profile=%s max_meshes=%s threads=%s",
-        os.path.basename(ifc_path), size_mb, profile, max_meshes, num_threads,
+        "IFC parse start path=%s size_mb=%.1f profile=%s detail=%s max_meshes=%s "
+        "defl=%.3f threads=%s",
+        os.path.basename(ifc_path), size_mb, profile, detail, max_meshes,
+        linear_defl, num_threads,
     )
 
     ifc_file = ifcopenshell.open(ifc_path)
@@ -801,13 +869,14 @@ def _parse_ifc_to_geometry(
             pass
 
     # Skipping boolean opening subtractions (window/door cut-outs) is a large
-    # speedup with minor visual impact, so it's on by default for the full
-    # "All Days" master model. Dedicated per-stage IFCs default to the env var.
+    # speedup. Only force it for low-detail / huge survival paths — medium/high
+    # keep openings so All Days matches laptop fidelity more closely.
     if fast_geometry is None:
         fast_geometry = os.getenv("IFC_FAST_GEOMETRY", "").strip().lower() in (
             "1", "true", "yes"
         )
-    if force_fast or fast_geometry:
+    apply_fast = force_fast or (bool(fast_geometry) and detail == "low")
+    if apply_fast:
         try:
             settings.set(settings.DISABLE_OPENING_SUBTRACTIONS, True)
         except Exception:
@@ -824,7 +893,7 @@ def _parse_ifc_to_geometry(
         "IfcVirtualElement",
         "IfcRelSpaceBoundary",
     }
-    if profile in ("large", "huge"):
+    if skip_extras:
         skip_types.update({
             "IfcFurnishingElement",
             "IfcBuildingElementProxy",
@@ -834,8 +903,8 @@ def _parse_ifc_to_geometry(
             "IfcTendon",
             "IfcTendonAnchor",
         })
-    if profile == "huge":
-        # Keep the building massing; drop fine MEP fittings that explode mesh count.
+    if skip_mep_detail:
+        # low/huge survival mode only — medium/high keep MEP for All Days fidelity.
         skip_types.update({
             "IfcFlowTerminal",
             "IfcFlowFitting",
@@ -889,10 +958,12 @@ def _parse_ifc_to_geometry(
         iterator = ifcopenshell.geom.iterator(settings, ifc_file)
 
     if not iterator.initialize():
-        return {"meshes": [], "parse_profile": profile, "truncated": False}
-
-    # Quantize verts more aggressively on large models to shrink JSON.
-    round_nd = 2 if profile == "huge" else (3 if profile == "large" else 4)
+        return {
+            "meshes": [],
+            "parse_profile": profile,
+            "parse_detail": detail,
+            "truncated": False,
+        }
 
     while True:
         if len(meshes) >= max_meshes:
@@ -913,9 +984,8 @@ def _parse_ifc_to_geometry(
         verts = np.nan_to_num(verts, nan=0.0, posinf=0.0, neginf=0.0)
         verts = np.round(verts, round_nd)
 
-        # Drop normals on large models — big payload win; Three.js can flat-shade.
         normals_arr = None
-        if profile == "normal":
+        if not drop_normals:
             normals_flat = np.asarray(geo.normals, dtype=np.float32)
             has_normals = normals_flat.size == verts.size
             normals_arr = (
@@ -988,12 +1058,13 @@ def _parse_ifc_to_geometry(
         _apply_elevation_phases(meshes)
 
     logger.info(
-        "IFC parse done path=%s meshes=%s truncated=%s profile=%s",
-        os.path.basename(ifc_path), len(meshes), truncated, profile,
+        "IFC parse done path=%s meshes=%s truncated=%s profile=%s detail=%s",
+        os.path.basename(ifc_path), len(meshes), truncated, profile, detail,
     )
     return {
         "meshes": meshes,
         "parse_profile": profile,
+        "parse_detail": detail,
         "truncated": truncated,
         "source_size_mb": round(size_mb, 1),
     }
@@ -1600,6 +1671,8 @@ def _build_geometry_payload(
         payload["truncated"] = True
     if geo.get("parse_profile"):
         payload["parse_profile"] = geo.get("parse_profile")
+    if geo.get("parse_detail"):
+        payload["parse_detail"] = geo.get("parse_detail")
     if geo.get("source_size_mb") is not None:
         payload["source_size_mb"] = geo.get("source_size_mb")
     if phase_source == "dedicated_ifc":
