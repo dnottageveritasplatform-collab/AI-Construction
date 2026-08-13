@@ -815,7 +815,7 @@ def _parse_ifc_to_geometry(
             max_meshes = int(os.getenv("IFC_MAX_MESHES_MED_HUGE", "14000") or "14000")
             linear_defl = float(os.getenv("IFC_DEFLECTION_MED_HUGE", "0.04") or "0.04")
             angular_defl = float(os.getenv("IFC_ANGULAR_MED_HUGE", "0.5") or "0.5")
-            force_fast = True  # openings off only for the largest files
+            force_fast = False  # keep window/door openings like laptop
             drop_normals = False
             round_nd = 3
             num_threads = 1
