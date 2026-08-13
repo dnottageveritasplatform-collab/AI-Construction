@@ -68,13 +68,15 @@ def _parse_job_set(path: str, state: str) -> None:
 
 
 def _parse_job_clear_if_stale(path: str) -> bool:
-    """If a 'running' job is older than IFC_PARSE_TIMEOUT, clear it so clients can retry."""
+    """If a 'running' job is older than the size-scaled timeout, clear it so clients can retry."""
     job = _PARSE_JOBS.get(path)
     if not job or job.get("state") != "running":
         return False
-    timeout_s = int(os.getenv("IFC_PARSE_TIMEOUT", "300") or "300")
+    timeout_s = _parse_timeout_for_path(path) if os.path.isfile(path) else int(
+        os.getenv("IFC_PARSE_TIMEOUT", "600") or "600"
+    )
     age = time.time() - float(job.get("t") or 0)
-    if age <= max(60, timeout_s + 30):
+    if age <= max(90, timeout_s + 60):
         return False
     _PARSE_JOBS.pop(path, None)
     logger.warning(
@@ -87,7 +89,7 @@ def _parse_job_clear_if_stale(path: str) -> bool:
 def _geometry_cache_path(ifc_path: str) -> str:
     st = os.stat(ifc_path)
     mtime_ns = getattr(st, "st_mtime_ns", int(st.st_mtime * 1_000_000_000))
-    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v8".encode()
+    key = f"{os.path.abspath(ifc_path)}\0{mtime_ns}\0{st.st_size}\0bim_v9".encode()
     h = hashlib.sha256(key).hexdigest()[:32]
     return os.path.join(GEOMETRY_CACHE_DIR, f"{h}.json")
 
@@ -658,6 +660,22 @@ def _bim_phase_for_shape(shape) -> str:
         return "structure"
 
 
+def _ifc_file_size_mb(path: str) -> float:
+    try:
+        return os.path.getsize(path) / (1024 * 1024)
+    except OSError:
+        return 0.0
+
+
+def _parse_timeout_for_path(path: str) -> int:
+    """Scale subprocess timeout with file size (large IFCs need far more than 5 min)."""
+    base = int(os.getenv("IFC_PARSE_TIMEOUT", "600") or "600")
+    mb = _ifc_file_size_mb(path)
+    # ~4s per MB above 10, capped.
+    extra = int(max(0.0, mb - 10.0) * 4)
+    return max(120, min(int(os.getenv("IFC_PARSE_TIMEOUT_MAX", "1200") or "1200"), base + extra))
+
+
 def _parse_ifc_to_geometry_subprocess(
     ifc_path: str,
     force_phase: str | None = None,
@@ -679,13 +697,13 @@ def _parse_ifc_to_geometry_subprocess(
     fast_env = os.getenv("IFC_FAST_GEOMETRY", "1").strip().lower()
     if fast_env not in ("0", "false", "no", "off"):
         cmd.append("--fast")
-    timeout_s = int(os.getenv("IFC_PARSE_TIMEOUT", "300") or "300")
+    timeout_s = _parse_timeout_for_path(ifc_path)
     try:
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=max(30, timeout_s),
+            timeout=max(60, timeout_s),
         )
         if proc.returncode != 0:
             err = (proc.stderr or proc.stdout or "").strip()
@@ -730,11 +748,57 @@ def _parse_ifc_to_geometry(
             "ifcopenshell is not installed. Run: pip install ifcopenshell"
         )
 
+    size_mb = _ifc_file_size_mb(ifc_path)
+    # Tiered profiles so >10MB models survive on ~2GB Render hosts.
+    if size_mb >= 80:
+        profile = "huge"
+        max_meshes = int(os.getenv("IFC_MAX_MESHES_HUGE", "3500") or "3500")
+        linear_defl = float(os.getenv("IFC_DEFLECTION_HUGE", "0.25") or "0.25")
+        angular_defl = float(os.getenv("IFC_ANGULAR_HUGE", "0.75") or "0.75")
+        force_fast = True
+        num_threads = 1
+    elif size_mb >= 10:
+        profile = "large"
+        max_meshes = int(os.getenv("IFC_MAX_MESHES_LARGE", "6000") or "6000")
+        linear_defl = float(os.getenv("IFC_DEFLECTION_LARGE", "0.12") or "0.12")
+        angular_defl = float(os.getenv("IFC_ANGULAR_LARGE", "0.5") or "0.5")
+        force_fast = True
+        num_threads = 1
+    else:
+        profile = "normal"
+        max_meshes = int(os.getenv("IFC_MAX_MESHES", "12000") or "12000")
+        linear_defl = float(os.getenv("IFC_DEFLECTION", "0.01") or "0.01")
+        angular_defl = float(os.getenv("IFC_ANGULAR", "0.5") or "0.5")
+        force_fast = False
+        try:
+            num_threads = max(1, min(4, (os.cpu_count() or 1)))
+        except Exception:
+            num_threads = 1
+
+    logger.info(
+        "IFC parse start path=%s size_mb=%.1f profile=%s max_meshes=%s threads=%s",
+        os.path.basename(ifc_path), size_mb, profile, max_meshes, num_threads,
+    )
+
     ifc_file = ifcopenshell.open(ifc_path)
 
     settings = ifcopenshell.geom.settings()
     settings.set(settings.USE_WORLD_COORDS, True)
     settings.set(settings.WELD_VERTICES, True)
+
+    # Coarser tessellation for large files → far less RAM / JSON payload.
+    for attr, value in (
+        ("DEFLECTION_TOLERANCE", linear_defl),
+        ("MESHER_LINEAR_DEFLECTION", linear_defl),
+        ("ANGULAR_TOLERANCE", angular_defl),
+        ("MESHER_ANGULAR_DEFLECTION", angular_defl),
+    ):
+        try:
+            flag = getattr(settings, attr, None)
+            if flag is not None:
+                settings.set(flag, value)
+        except Exception:
+            pass
 
     # Skipping boolean opening subtractions (window/door cut-outs) is a large
     # speedup with minor visual impact, so it's on by default for the full
@@ -743,7 +807,7 @@ def _parse_ifc_to_geometry(
         fast_geometry = os.getenv("IFC_FAST_GEOMETRY", "").strip().lower() in (
             "1", "true", "yes"
         )
-    if fast_geometry:
+    if force_fast or fast_geometry:
         try:
             settings.set(settings.DISABLE_OPENING_SUBTRACTIONS, True)
         except Exception:
@@ -751,24 +815,89 @@ def _parse_ifc_to_geometry(
                 "fast geometry: could not set disable-opening-subtractions", exc_info=True
             )
 
-    meshes = []
-    # Run the OpenCASCADE geometry kernel across all available cores. This is by
-    # far the dominant cost for large models; ifcopenshell releases the GIL while
-    # meshing, so threading gives a near-linear speedup on the heavy elements.
+    skip_types = {
+        "IfcOpeningElement",
+        "IfcSpace",
+        "IfcAnnotation",
+        "IfcGrid",
+        "IfcGridAxis",
+        "IfcVirtualElement",
+        "IfcRelSpaceBoundary",
+    }
+    if profile in ("large", "huge"):
+        skip_types.update({
+            "IfcFurnishingElement",
+            "IfcBuildingElementProxy",
+            "IfcDiscreteAccessory",
+            "IfcFastener",
+            "IfcMechanicalFastener",
+            "IfcTendon",
+            "IfcTendonAnchor",
+        })
+    if profile == "huge":
+        # Keep the building massing; drop fine MEP fittings that explode mesh count.
+        skip_types.update({
+            "IfcFlowTerminal",
+            "IfcFlowFitting",
+            "IfcFlowController",
+            "IfcFlowMovingDevice",
+            "IfcFlowStorageDevice",
+            "IfcFlowTreatmentDevice",
+            "IfcEnergyConversionDevice",
+            "IfcDistributionControlElement",
+            "IfcLamp",
+            "IfcLightFixture",
+            "IfcSanitaryTerminal",
+            "IfcWasteTerminal",
+            "IfcStackTerminal",
+            "IfcCableCarrierFitting",
+            "IfcCableFitting",
+            "IfcPipeFitting",
+            "IfcDuctFitting",
+        })
+
+    include = None
     try:
-        num_threads = max(1, (os.cpu_count() or 1))
+        products = list(ifc_file.by_type("IfcProduct"))
+        include = [p for p in products if p.is_a() not in skip_types]
+        logger.info(
+            "IFC products total=%s included=%s skipped_types=%s",
+            len(products), len(include), len(products) - len(include),
+        )
     except Exception:
-        num_threads = 1
+        include = None
+
+    meshes = []
+    truncated = False
     try:
-        iterator = ifcopenshell.geom.iterator(settings, ifc_file, num_threads)
+        if include is not None:
+            try:
+                iterator = ifcopenshell.geom.iterator(
+                    settings, ifc_file, num_threads, include=include
+                )
+            except TypeError:
+                iterator = ifcopenshell.geom.iterator(
+                    settings, ifc_file, include=include
+                )
+        else:
+            try:
+                iterator = ifcopenshell.geom.iterator(settings, ifc_file, num_threads)
+            except TypeError:
+                iterator = ifcopenshell.geom.iterator(settings, ifc_file)
     except TypeError:
-        # Older ifcopenshell without a num_threads parameter.
+        # Older ifcopenshell without include/num_threads.
         iterator = ifcopenshell.geom.iterator(settings, ifc_file)
 
     if not iterator.initialize():
-        return {"meshes": []}
+        return {"meshes": [], "parse_profile": profile, "truncated": False}
+
+    # Quantize verts more aggressively on large models to shrink JSON.
+    round_nd = 2 if profile == "huge" else (3 if profile == "large" else 4)
 
     while True:
+        if len(meshes) >= max_meshes:
+            truncated = True
+            break
         shape     = iterator.get()
         phase     = _bim_phase_for_shape(shape)
         geo       = shape.geometry
@@ -780,15 +909,19 @@ def _parse_ifc_to_geometry(
             continue
         faces = faces.reshape(-1, 3)            # (n_tri, 3)
 
-        verts = np.asarray(geo.verts, dtype=np.float64).reshape(-1, 3)
+        verts = np.asarray(geo.verts, dtype=np.float32).reshape(-1, 3)
         verts = np.nan_to_num(verts, nan=0.0, posinf=0.0, neginf=0.0)
+        verts = np.round(verts, round_nd)
 
-        normals_flat = np.asarray(geo.normals, dtype=np.float64)
-        has_normals = normals_flat.size == verts.size
-        normals_arr = (
-            np.nan_to_num(normals_flat.reshape(-1, 3), nan=0.0, posinf=0.0, neginf=0.0)
-            if has_normals else None
-        )
+        # Drop normals on large models — big payload win; Three.js can flat-shade.
+        normals_arr = None
+        if profile == "normal":
+            normals_flat = np.asarray(geo.normals, dtype=np.float32)
+            has_normals = normals_flat.size == verts.size
+            normals_arr = (
+                np.nan_to_num(normals_flat.reshape(-1, 3), nan=0.0, posinf=0.0, neginf=0.0)
+                if has_normals else None
+            )
 
         materials = geo.materials
         mat_ids = np.asarray(geo.material_ids, dtype=np.int64)
@@ -803,6 +936,9 @@ def _parse_ifc_to_geometry(
 
         # One mesh per distinct material colour.
         for mat_id in (int(m) for m in np.unique(mat_ids)):
+            if len(meshes) >= max_meshes:
+                truncated = True
+                break
             mat = materials[mat_id] if 0 <= mat_id < len(materials) else None
             if mat:
                 try:
@@ -829,19 +965,19 @@ def _parse_ifc_to_geometry(
             out_verts = verts[unique].reshape(-1)
             out_normals = (
                 normals_arr[unique].reshape(-1) if normals_arr is not None
-                else np.empty(0, dtype=np.float64)
+                else np.empty(0, dtype=np.float32)
             )
 
             meshes.append({
-                "vertices": out_verts.tolist(),
-                "normals":  out_normals.tolist(),
-                "indices":  inverse.astype(np.int64).reshape(-1).tolist(),
+                "vertices": out_verts.astype(float).tolist(),
+                "normals":  out_normals.astype(float).tolist() if out_normals.size else [],
+                "indices":  inverse.astype(np.int32).reshape(-1).tolist(),
                 "color":    [r, g, b, a],
                 "phase":    phase,
                 "ifc_type": ifc_type,
             })
 
-        if not iterator.next():
+        if truncated or not iterator.next():
             break
 
     force = _normalize_bim_phase(force_phase)
@@ -850,7 +986,17 @@ def _parse_ifc_to_geometry(
             mesh["phase"] = force
     else:
         _apply_elevation_phases(meshes)
-    return {"meshes": meshes}
+
+    logger.info(
+        "IFC parse done path=%s meshes=%s truncated=%s profile=%s",
+        os.path.basename(ifc_path), len(meshes), truncated, profile,
+    )
+    return {
+        "meshes": meshes,
+        "parse_profile": profile,
+        "truncated": truncated,
+        "source_size_mb": round(size_mb, 1),
+    }
 
 
 def _ifc_doc_id_from_filename(path: str) -> str:
@@ -1450,6 +1596,12 @@ def _build_geometry_payload(
         "resolved_phase": phase_req or "all",
         "stage_ifc_phases": _list_stage_ifc_phases(project_id),
     }
+    if geo.get("truncated"):
+        payload["truncated"] = True
+    if geo.get("parse_profile"):
+        payload["parse_profile"] = geo.get("parse_profile")
+    if geo.get("source_size_mb") is not None:
+        payload["source_size_mb"] = geo.get("source_size_mb")
     if phase_source == "dedicated_ifc":
         payload["dedicated_stage_ifc"] = True
     out = json.dumps(payload, separators=(",", ":")).encode("utf-8")

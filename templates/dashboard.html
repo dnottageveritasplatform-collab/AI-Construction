@@ -1152,6 +1152,10 @@
                 _lastGoodBim = { geoData, phase };
                 if (overlay) overlay.classList.remove("active");
                 if (noModel) noModel.classList.remove("active");
+                if (geoData.truncated && phaseTag) {
+                    const base = phaseTag.textContent || "BIM Model Loaded";
+                    phaseTag.textContent = base + " (simplified for size)";
+                }
             } catch(err) {
                 if (err && (err.name === "AbortError" || myToken !== _bimLoadToken)) return;
                 console.error("[BIMViewer]", err.message);

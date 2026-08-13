@@ -7,6 +7,9 @@ set -e
 export IFC_PREWARM="${IFC_PREWARM:-0}"
 # Prefer faster tessellation on cloud hosts (lower crash / OOM risk).
 export IFC_FAST_GEOMETRY="${IFC_FAST_GEOMETRY:-1}"
+# Large IFCs (All Stages ~100MB+) need a long child-process window.
+export IFC_PARSE_TIMEOUT="${IFC_PARSE_TIMEOUT:-600}"
+export IFC_PARSE_TIMEOUT_MAX="${IFC_PARSE_TIMEOUT_MAX:-1200}"
 
 PERSIST_ROOT="${PERSIST_ROOT:-/var/data}"
 
@@ -40,7 +43,7 @@ exec gunicorn \
   --worker-class gthread \
   --workers 1 \
   --threads 8 \
-  --timeout 300 \
+  --timeout 600 \
   --access-logfile - \
   --error-logfile - \
   app:app
