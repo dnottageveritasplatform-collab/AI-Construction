@@ -5,6 +5,8 @@ set -e
 
 # Default: do not background-parse IFC after upload (ifcopenshell can SIGSEGV on small hosts).
 export IFC_PREWARM="${IFC_PREWARM:-0}"
+# Prefer faster tessellation on cloud hosts (lower crash / OOM risk).
+export IFC_FAST_GEOMETRY="${IFC_FAST_GEOMETRY:-1}"
 
 PERSIST_ROOT="${PERSIST_ROOT:-/var/data}"
 

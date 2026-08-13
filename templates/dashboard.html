@@ -968,8 +968,11 @@
             try {
                 const sr = await fetch("/api/project/" + encodeURIComponent(pid) + "/bim-stages");
                 if (sr.ok) {
-                    const sj = await sr.json();
-                    _bimGeoCache.stagePhases = sj.stage_ifc_phases || [];
+                    const ct = (sr.headers.get("content-type") || "").toLowerCase();
+                    if (ct.includes("application/json")) {
+                        const sj = await sr.json();
+                        _bimGeoCache.stagePhases = sj.stage_ifc_phases || [];
+                    }
                 }
             } catch (e) {
                 console.warn("[BIMViewer] bim-stages lookup failed", e);
@@ -996,7 +999,58 @@
             }
         }
 
+        let _bimLoadToken = 0;
+        let _bimLoadAbort = null;
+        let _lastGoodBim = null; // { geoData, phase } — keep on screen if a later fetch fails
+
+        async function _fetchGeometryJson(url, signal) {
+            let lastErr = null;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                if (signal && signal.aborted) throw new DOMException("Aborted", "AbortError");
+                const resp = await fetch(url, { signal });
+                const ct = (resp.headers.get("content-type") || "").toLowerCase();
+                const stillParsing = resp.status === 202;
+                if (stillParsing) {
+                    try {
+                        if (ct.includes("json")) await resp.json();
+                        else await resp.text();
+                    } catch (_) { /* ignore */ }
+                    return { parsing: true, status: resp.status, data: null };
+                }
+                if (resp.status === 502 || resp.status === 503 || resp.status === 504) {
+                    lastErr = new Error("Server busy (HTTP " + resp.status + ")");
+                    await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+                    continue;
+                }
+                const text = await resp.text();
+                let data = null;
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    lastErr = new Error(
+                        text.trimStart().startsWith("<!") || text.includes("<!DOCTYPE")
+                            ? "Server returned an error page (HTTP " + resp.status + ") — retrying"
+                            : "Invalid JSON from server (HTTP " + resp.status + ")"
+                    );
+                    if (resp.status >= 500 || attempt < 2) {
+                        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+                        continue;
+                    }
+                    throw lastErr;
+                }
+                return { parsing: false, status: resp.status, data, ok: resp.ok };
+            }
+            throw lastErr || new Error("Geometry request failed");
+        }
+
         async function loadBimModel(fileUrl, projectId, phaseFilter) {
+            const myToken = ++_bimLoadToken;
+            if (_bimLoadAbort) {
+                try { _bimLoadAbort.abort(); } catch (_) {}
+            }
+            _bimLoadAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
+            const signal = _bimLoadAbort ? _bimLoadAbort.signal : undefined;
+
             if (overlay) overlay.classList.add("active");
             if (noModel) noModel.classList.remove("active");
             if (phaseEmpty) phaseEmpty.classList.remove("active");
@@ -1008,23 +1062,34 @@
                 if (!pid) throw new Error("No project ID");
 
                 await _ensureBimStageList(pid);
+                if (myToken !== _bimLoadToken) return;
 
                 const hasDedicated = phase && _bimGeoCache.stagePhases.includes(phase);
 
-                // Fast path: coordination IFC already in memory — only toggle visibility.
                 if (!hasDedicated && _bimGeoCache.master) {
                     console.log("[BIMViewer] cache hit (master) phase =", phase || "all");
                     _applyCachedBimView(_bimGeoCache.master, phase);
+                    _lastGoodBim = { geoData: _bimGeoCache.master, phase };
                     if (overlay) overlay.classList.remove("active");
                     return;
                 }
 
-                // Fast path: dedicated stage IFC already fetched for this session.
                 if (hasDedicated && _bimGeoCache.stages[phase]) {
                     console.log("[BIMViewer] cache hit (stage) phase =", phase);
                     if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
                     _fullModelLayout = null;
                     _applyCachedBimView(_bimGeoCache.stages[phase], phase);
+                    _lastGoodBim = { geoData: _bimGeoCache.stages[phase], phase };
+                    if (overlay) overlay.classList.remove("active");
+                    return;
+                }
+
+                if (phase && _bimGeoCache.stages[phase]) {
+                    console.log("[BIMViewer] cache hit (stage, soft) phase =", phase);
+                    if (modelGroup) { scene.remove(modelGroup); modelGroup = null; }
+                    _fullModelLayout = null;
+                    _applyCachedBimView(_bimGeoCache.stages[phase], phase);
+                    _lastGoodBim = { geoData: _bimGeoCache.stages[phase], phase };
                     if (overlay) overlay.classList.remove("active");
                     return;
                 }
@@ -1039,21 +1104,19 @@
 
                 const q = phase ? ("?phase=" + encodeURIComponent(phase)) : "";
                 const geoUrl = "/api/project/" + encodeURIComponent(pid) + "/bim-geometry" + q;
-                // The server parses heavy models in a background thread and replies
-                // HTTP 202 {status:"parsing"} until the geometry is cached. Poll
-                // until it's ready so the request never hangs for minutes.
                 let geoData = null;
                 const pollStart = Date.now();
                 const POLL_TIMEOUT_MS = 30 * 60 * 1000;
                 while (true) {
-                    const resp = await fetch(geoUrl);
-                    const stillParsing = resp.status === 202;
-                    if (!stillParsing) {
-                        console.log("[BIMViewer] geometry fetch status =", resp.status, "ok =", resp.ok);
-                        geoData = await resp.json();
-                        if (!resp.ok) {
+                    if (myToken !== _bimLoadToken) return;
+                    const result = await _fetchGeometryJson(geoUrl, signal);
+                    if (myToken !== _bimLoadToken) return;
+                    if (!result.parsing) {
+                        console.log("[BIMViewer] geometry fetch status =", result.status, "ok =", result.ok);
+                        geoData = result.data;
+                        if (!result.ok) {
                             const detail = (geoData && (geoData.error || geoData.message)) || "";
-                            const status = (geoData && geoData.status) ? geoData.status : ("HTTP " + resp.status);
+                            const status = (geoData && geoData.status) ? geoData.status : ("HTTP " + result.status);
                             throw new Error(detail ? (status + ": " + detail) : status);
                         }
                         if (!geoData || geoData.status !== "parsing") break;
@@ -1065,6 +1128,7 @@
                     if (Date.now() - pollStart > POLL_TIMEOUT_MS) throw new Error("Timed out preparing model");
                     await new Promise(r => setTimeout(r, 3000));
                 }
+                if (myToken !== _bimLoadToken) return;
                 const meshN = (geoData.meshes && geoData.meshes.length) || 0;
                 const lineN = (geoData.lines && geoData.lines.length) || 0;
                 if (meshN === 0 && lineN === 0) throw new Error(geoData.status || "Server returned no geometry");
@@ -1078,18 +1142,31 @@
                 }
                 if (geoData.dedicated_stage_ifc && phase) {
                     _bimGeoCache.stages[phase] = geoData;
+                    if (!_bimGeoCache.stagePhases.includes(phase)) {
+                        _bimGeoCache.stagePhases.push(phase);
+                    }
                 } else {
                     _bimGeoCache.master = geoData;
                 }
                 _applyCachedBimView(geoData, phase);
+                _lastGoodBim = { geoData, phase };
                 if (overlay) overlay.classList.remove("active");
                 if (noModel) noModel.classList.remove("active");
             } catch(err) {
-                // Show the REAL error in the phase tag so it's visible on screen
+                if (err && (err.name === "AbortError" || myToken !== _bimLoadToken)) return;
                 console.error("[BIMViewer]", err.message);
                 if (overlay) overlay.classList.remove("active");
                 if (phaseEmpty) phaseEmpty.classList.remove("active");
-                if (noModel) noModel.classList.add("active");
+                if (_lastGoodBim && _lastGoodBim.geoData) {
+                    try {
+                        _applyCachedBimView(_lastGoodBim.geoData, phase || _lastGoodBim.phase);
+                        if (noModel) noModel.classList.remove("active");
+                    } catch (_) {
+                        if (noModel) noModel.classList.add("active");
+                    }
+                } else {
+                    if (noModel) noModel.classList.add("active");
+                }
                 if (phaseTag) {
                     const msg = err.message || "";
                     if (msg.includes("no_ifc_for_project")) {
@@ -1105,15 +1182,15 @@
                     } else if (msg.includes("cad_parse_failed") || msg.includes("DWG conversion") || msg.includes("Native DWG")) {
                         phaseTag.textContent = "⚠ DWG failed — restart CMD after setting ODAFC_EXE, or use DXF";
                     } else if (msg.includes("parse_failed")) {
-                        phaseTag.textContent = "⚠ BIM parse failed";
+                        phaseTag.textContent = "⚠ BIM prepare failed — switch stage and try again";
+                    } else if (msg.includes("DOCTYPE") || msg.includes("error page") || msg.includes("Server busy") || msg.includes("Invalid JSON")) {
+                        phaseTag.textContent = "⚠ Server busy preparing model — try again in a moment";
                     } else {
                         phaseTag.textContent = "⚠ " + msg;
                     }
                 }
             } finally {
-                // Ensure the overlay spinner never keeps spinning forever.
-                if (overlay) overlay.classList.remove("active");
-                // Also stop any automatic camera rotation after load attempt.
+                if (myToken === _bimLoadToken && overlay) overlay.classList.remove("active");
                 autoRot = false;
             }
         }

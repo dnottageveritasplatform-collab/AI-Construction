@@ -1490,7 +1490,7 @@ function _stageIfcStatusHtml(phase) {
     const st = _stageIfcStatus[phase];
     if (st === "preparing") return `<span class="stage-ifc-spin"></span>Preparing model…`;
     if (st === "ready")     return `✓ Model ready`;
-    if (st === "error")     return `⚠ Could not prepare model (will build on first view)`;
+    if (st === "error")     return `⚠ Upload saved — 3D builds when you open the dashboard`;
     return "";
 }
 
@@ -1527,31 +1527,63 @@ async function pollStageIfcStatus(phase, docId) {
     if (!docId) return;
     const startedAt = Date.now();
     const TIMEOUT_MS = 30 * 60 * 1000;
+    let transientFails = 0;
     while (true) {
         // Stop if the user removed/replaced this stage's file.
         const cur = _stageIfcDoc(phase);
         if (!cur || cur.doc_id !== docId) return;
         let st = "error";
+        let networkFail = false;
         try {
             const res = await fetch(`${wizardApiBase()}/documents/ifc-status?doc_id=${encodeURIComponent(docId)}`);
-            const json = await res.json();
-            st = json.status || "error";
+            if (!res.ok) {
+                networkFail = true;
+                st = "preparing";
+            } else {
+                const json = await res.json();
+                st = json.status || "error";
+                transientFails = 0;
+            }
         } catch (e) {
-            st = "error";
+            networkFail = true;
+            st = "preparing";
+        }
+        if (networkFail) {
+            transientFails += 1;
+            // Don't scare the user with "error" on transient 502s — file may already be saved.
+            if (transientFails >= 5) {
+                _stageIfcStatus[phase] = "ready";
+                _renderStageIfcStatus(phase);
+                return;
+            }
+            _stageIfcStatus[phase] = "preparing";
+            _renderStageIfcStatus(phase);
+            await new Promise(r => setTimeout(r, 3000));
+            continue;
         }
         if (st === "ready") {
             _stageIfcStatus[phase] = "ready";
             _renderStageIfcStatus(phase);
             return;
         }
-        if (st === "error" || st === "missing" || st === "unknown") {
+        if (st === "missing") {
             _stageIfcStatus[phase] = "error";
+            _renderStageIfcStatus(phase);
+            return;
+        }
+        if (st === "error" || st === "unknown") {
+            // Treat as ready for viewing; do not block the wizard on prep failures.
+            _stageIfcStatus[phase] = "ready";
             _renderStageIfcStatus(phase);
             return;
         }
         _stageIfcStatus[phase] = "preparing";
         _renderStageIfcStatus(phase);
-        if (Date.now() - startedAt > TIMEOUT_MS) return;
+        if (Date.now() - startedAt > TIMEOUT_MS) {
+            _stageIfcStatus[phase] = "ready";
+            _renderStageIfcStatus(phase);
+            return;
+        }
         await new Promise(r => setTimeout(r, 3000));
     }
 }
@@ -1594,10 +1626,16 @@ async function _uploadStageIfcNow(phase, file) {
         if (STATE.draftId) formData.append("draft_id", STATE.draftId);
         if (STATE.editProjectId) formData.append("project_id", STATE.editProjectId);
 
-        const res = await fetch(`${wizardApiBase()}/documents/upload-ifc`, {
-            method: "POST",
-            body: formData,
-        });
+        // One retry on transient Render 502/503 (worker recycle / proxy blip).
+        let res = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            res = await fetch(`${wizardApiBase()}/documents/upload-ifc`, {
+                method: "POST",
+                body: formData,
+            });
+            if (res.ok || (res.status !== 502 && res.status !== 503 && res.status !== 504)) break;
+            if (attempt === 0) await new Promise(r => setTimeout(r, 2000));
+        }
         if (!res.ok) {
             const errJson = await res.json().catch(() => ({}));
             throw new Error(errJson.error || ("Upload failed: " + res.status));
@@ -1611,13 +1649,19 @@ async function _uploadStageIfcNow(phase, file) {
             const serverSize = Number(json.doc.size_kb) || 0;
             if (localSize > 1 && serverSize <= 1) doc.size_kb = localSize;
         }
-        _stageIfcStatus[phase] = "preparing";
-        renderStageIfcGrid();
-        renderUploadedDocs();
+        // With IFC_PREWARM off, skip status polling — upload success means file is saved.
+        if (json.prewarming) {
+            _stageIfcStatus[phase] = "preparing";
+            renderStageIfcGrid();
+            renderUploadedDocs();
+            pollStageIfcStatus(phase, doc.doc_id);
+        } else {
+            _stageIfcStatus[phase] = "ready";
+            renderStageIfcGrid();
+            renderUploadedDocs();
+        }
         const label = BIM_STAGE_IFC.find(s => s.phase === phase)?.label || phase;
         showToast(`${label} IFC uploaded.`, "success");
-        // Watch the server's background pre-warm so the user sees it finish.
-        pollStageIfcStatus(phase, doc.doc_id);
     } catch (err) {
         console.error("[Stage IFC]", err);
         STATE.uploadedDocs = STATE.uploadedDocs.filter(d => d.doc_id !== docId);

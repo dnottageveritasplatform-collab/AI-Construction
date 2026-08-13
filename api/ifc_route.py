@@ -47,13 +47,41 @@ def _ifc_prewarm_enabled() -> bool:
 
 
 # Background parse jobs so the browser never blocks on a long first parse.
-# Maps absolute ifc/cad path -> "running" | "error". Guarded by _PARSE_LOCK.
-_PARSE_JOBS: dict[str, str] = {}
+# Maps absolute ifc/cad path -> {"state": "running"|"error", "t": epoch}. Guarded by _PARSE_LOCK.
+_PARSE_JOBS: dict[str, dict] = {}
 _PARSE_LOCK = threading.Lock()
 # One IFC upload at a time (large multipart + projects.json save).
 _IFC_UPLOAD_LOCK = threading.Lock()
 # One heavy geometry parse at a time (avoids OOM / 502 under concurrent prewarms).
 _PREWARM_SERIAL_LOCK = threading.Lock()
+
+
+def _parse_job_state(path: str) -> str | None:
+    job = _PARSE_JOBS.get(path)
+    if not job:
+        return None
+    return job.get("state")
+
+
+def _parse_job_set(path: str, state: str) -> None:
+    _PARSE_JOBS[path] = {"state": state, "t": time.time()}
+
+
+def _parse_job_clear_if_stale(path: str) -> bool:
+    """If a 'running' job is older than IFC_PARSE_TIMEOUT, clear it so clients can retry."""
+    job = _PARSE_JOBS.get(path)
+    if not job or job.get("state") != "running":
+        return False
+    timeout_s = int(os.getenv("IFC_PARSE_TIMEOUT", "300") or "300")
+    age = time.time() - float(job.get("t") or 0)
+    if age <= max(60, timeout_s + 30):
+        return False
+    _PARSE_JOBS.pop(path, None)
+    logger.warning(
+        "Cleared stale IFC parse job path=%s age_s=%.0f",
+        os.path.basename(path), age,
+    )
+    return True
 
 
 def _geometry_cache_path(ifc_path: str) -> str:
@@ -630,6 +658,54 @@ def _bim_phase_for_shape(shape) -> str:
         return "structure"
 
 
+def _parse_ifc_to_geometry_subprocess(
+    ifc_path: str,
+    force_phase: str | None = None,
+) -> dict:
+    """
+    Parse IFC in a separate process. If ifcopenshell SIGSEGVs, only the child dies;
+    Gunicorn keeps serving Edit Project / uploads (no site-wide 502).
+    """
+    import subprocess
+    import sys
+
+    worker = os.path.join(_APP_ROOT, "scripts", "ifc_geometry_worker.py")
+    fd, out_path = tempfile.mkstemp(prefix="ifc_geo_", suffix=".json")
+    os.close(fd)
+    cmd = [sys.executable, worker, "--path", ifc_path, "--out", out_path]
+    if force_phase:
+        cmd.extend(["--force-phase", str(force_phase)])
+    # Prefer fast tessellation on cloud unless explicitly disabled.
+    fast_env = os.getenv("IFC_FAST_GEOMETRY", "1").strip().lower()
+    if fast_env not in ("0", "false", "no", "off"):
+        cmd.append("--fast")
+    timeout_s = int(os.getenv("IFC_PARSE_TIMEOUT", "300") or "300")
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=max(30, timeout_s),
+        )
+        if proc.returncode != 0:
+            err = (proc.stderr or proc.stdout or "").strip()
+            if proc.returncode < 0:
+                sig = -proc.returncode
+                raise RuntimeError(
+                    f"IFC parse child crashed (signal {sig}). {err}".strip()
+                )
+            raise RuntimeError(f"IFC parse failed (exit {proc.returncode}): {err}")
+        with open(out_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"IFC parse timed out after {timeout_s}s") from e
+    finally:
+        try:
+            os.unlink(out_path)
+        except OSError:
+            pass
+
+
 def _parse_ifc_to_geometry(
     ifc_path: str,
     force_phase: str | None = None,
@@ -1009,8 +1085,9 @@ def _prewarm_ifc_geometry(path: str, project_id: str, phase: str | None) -> None
 
     started = False
     with _PARSE_LOCK:
-        if _PARSE_JOBS.get(path) != "running":
-            _PARSE_JOBS[path] = "running"
+        _parse_job_clear_if_stale(path)
+        if _parse_job_state(path) != "running":
+            _parse_job_set(path, "running")
             started = True
     if started:
         threading.Thread(
@@ -1126,7 +1203,8 @@ def _ifc_geometry_status(prefix_id: str, doc_id: str) -> dict:
     except Exception:
         pass
     with _PARSE_LOCK:
-        state = _PARSE_JOBS.get(path)
+        _parse_job_clear_if_stale(path)
+        state = _parse_job_state(path)
     if state == "running":
         return {"status": "preparing"}
     if state == "error":
@@ -1346,9 +1424,15 @@ def _build_geometry_payload(
 ) -> bytes:
     """Parse a BIM file and return the JSON payload bytes (also written to cache)."""
     if kind == "ifc":
-        # Full fidelity (window/door openings preserved). Cached to disk so the
-        # heavy parse is paid only once per file.
-        geo = _parse_ifc_to_geometry(path, force_phase=force_phase)
+        # Full fidelity when IFC_FAST_GEOMETRY=0. Run in a child process so a
+        # native crash cannot take down the web worker (Render 502 storm).
+        use_sub = os.getenv("IFC_PARSE_SUBPROCESS", "1").strip().lower() not in (
+            "0", "false", "no", "off",
+        )
+        if use_sub:
+            geo = _parse_ifc_to_geometry_subprocess(path, force_phase=force_phase)
+        else:
+            geo = _parse_ifc_to_geometry(path, force_phase=force_phase)
     else:
         geo = parse_cad_to_geometry(path)
 
@@ -1400,7 +1484,7 @@ def _run_parse_job(
         except Exception:
             logger.exception("Background BIM parse failed for %s", path)
             with _PARSE_LOCK:
-                _PARSE_JOBS[path] = "error"
+                _parse_job_set(path, "error")
             return
         with _PARSE_LOCK:
             _PARSE_JOBS.pop(path, None)
@@ -1479,16 +1563,21 @@ def get_ifc_geometry(project_id: str):
             started = False
             prior_error = False
             with _PARSE_LOCK:
-                state = _PARSE_JOBS.get(path)
+                _parse_job_clear_if_stale(path)
+                state = _parse_job_state(path)
                 if state == "error":
                     # Surface the failure once, then clear so a reload can retry.
                     _PARSE_JOBS.pop(path, None)
                     prior_error = True
                 elif state != "running":
-                    _PARSE_JOBS[path] = "running"
+                    _parse_job_set(path, "running")
                     started = True
             if prior_error:
-                return jsonify({"meshes": [], "status": "parse_failed"}), 500
+                return jsonify({
+                    "meshes": [],
+                    "status": "parse_failed",
+                    "error": "Previous geometry prepare failed — retry.",
+                }), 500
             if started:
                 threading.Thread(
                     target=_run_parse_job,
